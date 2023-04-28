@@ -62,7 +62,7 @@ rule kraken2:
     threads: 10
     shell: 
         """
-        /mnt/disk1/PROJECTS/SURPRISE/external_rna/BOOKS/kraken2/KRAKEN_DIR/kraken2 --threads {threads} --confidence 0.9 --db {params.kraken2_db} {input.read1} {input.read2} --use-names --report {output.kraken2_report} --output {output.kraken2_out}
+        kraken2/KRAKEN_DIR/kraken2 --threads {threads} --confidence 0.9 --db {params.kraken2_db} {input.read1} {input.read2} --use-names --report {output.kraken2_report} --output {output.kraken2_out}
         """
         
 rule extract_seq_ids:
