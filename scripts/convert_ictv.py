@@ -7,7 +7,7 @@ def if_condition(x, message):
         print(message)
         exit()
 
-description = """ Script that concatenate samtools coverage output with ictv metadata"""
+description = """ Script that concatenate a samtools coverage output with an ictv metadata"""
         
 parser = argparse.ArgumentParser(description=description)
 
@@ -52,12 +52,13 @@ data = pd.merge(left=data, right=ictv_data.reset_index(), left_on='ictv_taxo_ind
 
 # Generalize fragments of one virus
 data.coverage = data.coverage * 0.01
-data['weighted_coverage'] = data.endpos  * data.coverage
-data['len'] = data.endpos
+data['len'] = data.endpos - startpos
+data['weighted_coverage'] = data['len']  * data.coverage
+
 
 agg_all_columns_dict = dict()
 agg_all_columns_dict.update({'len':'sum', 'weighted_coverage':'sum'})
-agg_all_columns_dict.update({'coverage': lambda x: [round(i, 2) for i in list(x)]})
+agg_all_columns_dict.update({'coverage': lambda x: [i for i in list(x)]})
 agg_all_columns_dict.update({i:'first' for i in ['rname', 'Realm', 'Kingdom',
        'Subkingdom', 'Phylum', 'Subphylum', 'Class', 'Order', 'Family', 'Genus', 'Species',
               'Virus name(s)', 'Virus GENBANK accession', 'Host source']})
