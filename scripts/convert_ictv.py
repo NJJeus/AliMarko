@@ -36,7 +36,7 @@ ictv_data = pd.read_excel(f'{tables_folder}/ictv_taxo.xlsx')
 taxo_index = pd.read_csv(f'{tables_folder}/genbank_accessions.csv', index_col=0)
 
 # Read samtools coverage output and drop excess columns
-data = pd.read_table(coverage_file).rename(columns={'#rname': 'rname'}).drop(['startpos', 'numreads', 'covbases',
+data = pd.read_table(coverage_file).rename(columns={'#rname': 'rname'}).drop(['numreads', 'covbases',
        'meandepth', 'meanbaseq', 'meanmapq'], axis=1)
 
 # rname contains database name, accession number and version. We need only an accession number
@@ -52,7 +52,7 @@ data = pd.merge(left=data, right=ictv_data.reset_index(), left_on='ictv_taxo_ind
 
 # Generalize fragments of one virus
 data.coverage = data.coverage * 0.01
-data['len'] = data.endpos - startpos
+data['len'] = data.endpos - data.startpos
 data['weighted_coverage'] = data['len']  * data.coverage
 
 
