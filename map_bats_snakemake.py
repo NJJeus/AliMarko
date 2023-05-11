@@ -13,11 +13,11 @@ suffix_1 = "_R1.fastq.gz"
 suffix_2 = "_R2.fastq.gz"
 
 
-want_all = (expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files))
+want_all = (expand(base + 'ictv_coverage/' + '{file}' + '.tsv', file=files))
 print(want_all[:1])
 
 rule all:
-    input: want_all
+    input: base + 'result_coverage_table.tsv'
 
 rule map_raw_fastq:
     input: 
@@ -117,13 +117,14 @@ rule calculate_coverage:
     output: base + 'calculated_coverage/' + '{file}' + '.txt'
     shell:
         """
-        samtools coverage {input} > {output}
+        ~/samtools/samtools coverage {input} > {output}
         """
+
 rule convert_coverage:
-    input: base + 'calculated_coverage/' + '{file}' + '.txt'
-    output: base + 'ictv_coverage/' + '{file}' + '.csv'
+    input: 
+        expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files)
+    output: base + 'result_coverage_table.tsv'
     shell:
         """
-        python scripts/convert_ictv.py -c {input} -o {output} -t DATA/sheets/
+        python scripts/generalize_ictv.py -f {input} -o {output}
         """
-      
