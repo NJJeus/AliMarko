@@ -7,7 +7,9 @@ def if_condition(x, message):
         print(message)
         exit()
 
-parser = argparse.ArgumentParser(description='Description of your script')
+description = """ Script that concatenate samtools coverage output with ictv metadata"""
+        
+parser = argparse.ArgumentParser(description=description)
 
 parser.add_argument('-c', '--coverage', type=str, help='A file with samtools coverage output')
 parser.add_argument('-o', '--output', type=str, help='An output file')
@@ -33,34 +35,40 @@ else:
 ictv_data = pd.read_excel(f'{tables_folder}/ictv_taxo.xlsx')
 taxo_index = pd.read_csv(f'{tables_folder}/genbank_accessions.csv', index_col=0)
 
-
-agg_all_columns_dict = dict()
-agg_all_columns_dict.update({'len':'sum', 'weighted_coverage':'sum'})
-agg_all_columns_dict.update({i:'first' for i in ['rname', 'Realm', 'Kingdom',
-       'Subkingdom', 'Phylum', 'Subphylum', 'Class', 'Order', 'Family', 'Genus', 'Species',
-              'Virus name(s)', 'Virus GENBANK accession', 'Host source']})    
-
+# Read samtools coverage output and drop excess columns
 data = pd.read_table(coverage_file).rename(columns={'#rname': 'rname'}).drop(['startpos', 'numreads', 'covbases',
        'meandepth', 'meanbaseq', 'meanmapq'], axis=1)
+
+# rname contains database name, accession number and version. We need only an accession number
 data['rname'] = data['rname'].apply(lambda x: x.split('|')[1])
 
 name = os.path.splitext(os.path.basename(coverage_file))[0]
 
+# Concatenate a coverage data with an ictv metadata 
 data = data.copy()
 data = data.set_index('rname')
-data = pd.merge(left=data.reset_index(), right=taxo_index.reset_index(), left_on='rname', right_on='index')
-data = pd.merge(left=data, right=ictv_data.reset_index(), left_on='ictv_taxo_index', right_on='index')
+data = pd.merge(left=data.reset_index(), right=taxo_index.reset_index(), left_on='rname', right_on='index') # Get index of all accession number
+data = pd.merge(left=data, right=ictv_data.reset_index(), left_on='ictv_taxo_index', right_on='index') # Get ictv metadata by accession number
 
-
-data['weighted_coverage'] = data.endpos * 0.01 * data.coverage
+# Generalize fragments of one virus
+data.coverage = data.coverage * 0.01
+data['weighted_coverage'] = data.endpos  * data.coverage
 data['len'] = data.endpos
 
+agg_all_columns_dict = dict()
+agg_all_columns_dict.update({'len':'sum', 'weighted_coverage':'sum'})
+agg_all_columns_dict.update({'coverage': lambda x: [round(i, 2) for i in list(x)]})
+agg_all_columns_dict.update({i:'first' for i in ['rname', 'Realm', 'Kingdom',
+       'Subkingdom', 'Phylum', 'Subphylum', 'Class', 'Order', 'Family', 'Genus', 'Species',
+              'Virus name(s)', 'Virus GENBANK accession', 'Host source']})
 data = data.groupby('Species').agg(agg_all_columns_dict)
+data['fragments_coverage'] = data['coverage'].copy()
 
 data['coverage'] = data.weighted_coverage / data.len
 data = data.sort_values(by='coverage', ascending=False)
 
-data = data[['Virus name(s)', 'Host source', 'coverage','Realm', 'Kingdom', 'Subkingdom', 'Phylum', 'Subphylum', 'Class',
+# Clean and output
+data = data[['Virus name(s)', 'Host source', 'coverage', 'fragments_coverage', 'Realm', 'Kingdom', 'Subkingdom', 'Phylum', 'Subphylum', 'Class',
    'Order', 'Family', 'Genus', 'Species',
    'Virus GENBANK accession']]
 
