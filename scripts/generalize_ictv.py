@@ -21,11 +21,19 @@ files = args.files
 out = args.output
 
 common_file = pd.read_csv(files[0], converters={'fragments_coverage': pd.eval}).sort_values(by='Species')
+max_coverage = np.array(common_file.coverage)
+min_coverage = np.array(common_file.coverage)
 for i in files[1:]:
     file = pd.read_csv(i, converters={'fragments_coverage': pd.eval}).sort_values(by='Species')
     common_file.coverage = np.array(common_file.coverage) + np.array(file.coverage)
     common_file.fragments_coverage = per_fragments_sum_coverage(common_file.fragments_coverage.values.tolist(),
                                                            file.fragments_coverage.values.tolist())
+    max_coverage = np.maximum(max_coverage, np.array(file.coverage))
+    min_coverage = np.minimum(min_coverage, np.array(file.coverage))
+common_file.insert(value=max_coverage, column='max_coverage',  loc=4)
+common_file.insert(value=min_coverage, column='min_coverage',  loc=5)
+common_file.max_coverage = (common_file.max_coverage.round(2) * 100).astype('int')
+common_file.min_coverage = (common_file.min_coverage.round(2) * 100).astype('int')
 common_file.coverage = ((common_file.coverage/len(files)).apply(lambda x: round(x, 2)) * 100).astype('int')
 common_file.fragments_coverage = common_file.fragments_coverage.apply(lambda x: mean_per_fragments_coverage(x, len(files)))
 
