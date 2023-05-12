@@ -66,7 +66,7 @@ rule kraken2:
             read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     params: 
             kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
-            sample=lambda wildcards: wildcards.file
+            sample = lambda wildcards: wildcards.file
     conda:
         "envs/kraken2.yaml"
     threads: 10
