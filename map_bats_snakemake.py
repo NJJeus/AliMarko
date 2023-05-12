@@ -69,7 +69,6 @@ rule kraken2:
         """
 
 
-        
 rule pair_unclassified_fastq:
     input:
         read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq',
