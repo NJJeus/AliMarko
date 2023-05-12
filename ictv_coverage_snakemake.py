@@ -46,24 +46,24 @@ rule extract_mapped_sam_sorted:
 rule extract_mapped_fastq:
     input: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sam.sorted'
     output: 
-        read1=base+'mapped_fastq/'+"{file}"+'_1.fastq',
-        read2=base+'mapped_fastq/'+"{file}"+'_2.fastq'
+        read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
     conda:
         "envs/bwa.yaml"
     shell:
         """
-        samtools fastq {input} -1 {output.read1} -2 {output.read2} --threads {threads};
+        samtools fastq {input} -1 {output.read1} -2 {output.read2} --threads {threads} -c 8;
         """
     
     
 rule kraken2:
-    input: read1=base+'mapped_fastq/'+"{file}"+'_1.fastq',
-           read2=base+'mapped_fastq/'+"{file}"+'_2.fastq'
+    input: read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
+           read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
     output: kraken2_report = base+"kraken_results/{file}.report",
             kraken2_out = base+"kraken_results/{file}.out",
-            read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq',
-            read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq'
+            read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq.gz',
+            read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     params: 
             kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
             sample=lambda wildcards: wildcards.file
@@ -72,18 +72,19 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        kraken2/KRAKEN_DIR/kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}#.fastq --paired
-        
+        kraken2/KRAKEN_DIR/kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
+        gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
+        gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
         """
 
 
 rule pair_unclassified_fastq:
     input:
-        read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq',
-        read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq'
+        read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     output:
-        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq',
-        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq'
+        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
     conda:
         "envs/seqkit.yaml"
@@ -94,8 +95,8 @@ rule pair_unclassified_fastq:
 
 rule map_extracted_fastq:
     input: 
-        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq',
-        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq',
+        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz',
         reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
     output: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.sam'
     threads: 10
