@@ -22,7 +22,7 @@ rule map_raw_fastq:
         read1=base+'raw_fastq/'+"{file}"+'_R1.fastq.gz',
         read2=base+'raw_fastq/'+"{file}"+'_R2.fastq.gz',
         reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
-    output: base+'sam_sorted/'+'{file}'+'.sam.sorted'
+    output: base+'sam_sorted/'+'{file}'+'.sorted.bam'
     threads: 10
     conda:
         "envs/bwa.yaml"
@@ -33,8 +33,8 @@ rule map_raw_fastq:
     
     
 rule extract_mapped_sam_sorted:  
-    input: base+'sam_sorted/'+'{file}'+'.sam.sorted'
-    output: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sam.sorted'
+    input: base+'sam_sorted/'+'{file}'+'.sorted.bam'
+    output: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sorted.bam'
     threads: 10
     conda:
         "envs/bwa.yaml"
@@ -44,7 +44,7 @@ rule extract_mapped_sam_sorted:
         """
 
 rule extract_mapped_fastq:
-    input: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sam.sorted'
+    input: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sorted.bam'
     output: 
         read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
@@ -98,7 +98,7 @@ rule map_extracted_fastq:
         read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz',
         reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
-    output: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.sam'
+    output: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.bam'
     threads: 10
     conda:
         "envs/bwa.yaml"
@@ -122,7 +122,7 @@ rule convert_coverage:
     output: base + 'ictv_coverage/' + '{file}' + '.csv'
     shell:
         """
-        python scripts/convert_ictv.py -c {input} -o {output} -t DATA/sheets/
+        python scripts/convert_ictv.py -c {input} -o {output} -t ictv_tables
         """
         
 rule generalize_coverage:
