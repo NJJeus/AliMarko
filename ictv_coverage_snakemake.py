@@ -72,7 +72,7 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        kraken2/KRAKEN_DIR/kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
+        kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
         gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
         """
@@ -108,13 +108,13 @@ rule map_extracted_fastq:
         """
         
 rule calculate_coverage:
-    input: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.sam'
+    input: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.bam'
     output: base + 'calculated_coverage/' + '{file}' + '.txt'
     conda:
         "envs/bwa.yaml"
     shell:
         """
-        ~/samtools/samtools coverage {input} > {output}
+        samtools coverage {input} > {output}
         """
 
 rule convert_coverage:
