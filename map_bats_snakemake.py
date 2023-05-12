@@ -24,6 +24,8 @@ rule map_raw_fastq:
         reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
     output: base+'sam_sorted/'+'{file}'+'.sam.sorted'
     threads: 10
+    conda:
+        "envs/bwa.yaml"
     shell:
         """
         bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
@@ -34,6 +36,8 @@ rule extract_mapped_sam_sorted:
     input: base+'sam_sorted/'+'{file}'+'.sam.sorted'
     output: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sam.sorted'
     threads: 10
+    conda:
+        "envs/bwa.yaml"
     shell:
         """
         samtools view -b -F 4 -f 1 {input} --threads {threads} > {output}
@@ -45,6 +49,8 @@ rule extract_mapped_fastq:
         read1=base+'mapped_fastq/'+"{file}"+'_1.fastq',
         read2=base+'mapped_fastq/'+"{file}"+'_2.fastq'
     threads: 10
+    conda:
+        "envs/bwa.yaml"
     shell:
         """
         samtools fastq {input} -1 {output.read1} -2 {output.read2} --threads {threads};
@@ -61,6 +67,8 @@ rule kraken2:
     params: 
             kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
             sample=lambda wildcards: wildcards.file
+    conda:
+        "envs/kraken2.yaml"
     threads: 10
     shell: 
         f"""
@@ -77,6 +85,8 @@ rule pair_unclassified_fastq:
         read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq',
         read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq'
     threads: 10
+    conda:
+        "envs/seqkit.yaml"
     shell:
         f"""
         seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/mapped_not_classified_paired_fastq/
@@ -89,6 +99,8 @@ rule map_extracted_fastq:
         reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
     output: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.sam'
     threads: 10
+    conda:
+        "envs/bwa.yaml"
     shell:
         """
         bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
@@ -97,6 +109,8 @@ rule map_extracted_fastq:
 rule calculate_coverage:
     input: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.sam'
     output: base + 'calculated_coverage/' + '{file}' + '.txt'
+    conda:
+        "envs/bwa.yaml"
     shell:
         """
         ~/samtools/samtools coverage {input} > {output}

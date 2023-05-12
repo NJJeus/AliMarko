@@ -1,0 +1,10 @@
+name: bwa
+channels:
+  - anaconda
+  - bioconda
+  - conda-forge
+dependencies:
+  - bwa
+  - libgcc-ng=12.2.0
+  - samtools=1.17
+  

@@ -1,0 +1,8 @@
+name: scripts
+channels:
+  - defaults
+  - acaconda
+dependencies:
+  - python=3.10
+  - pandas
+  - numpy
