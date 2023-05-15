@@ -6,7 +6,7 @@ import random
 
 base = "DATA/test/"
 
-files, = glob_wildcards(base+'raw_fastq/'+"{file}"+'_R1.fastq.gz')
+files, = glob_wildcards(base+'raw_fastq/'+"{file}"+'_1.fastq.gz')
 
 suffix_1 = "_R1.fastq.gz"
 suffix_2 = "_R2.fastq.gz"
@@ -19,8 +19,8 @@ rule all:
 
 rule map_raw_fastq:
     input: 
-        read1=base+'raw_fastq/'+"{file}"+'_R1.fastq.gz',
-        read2=base+'raw_fastq/'+"{file}"+'_R2.fastq.gz',
+        read1 = base+'raw_fastq/'+"{file}"+'_1.fastq.gz',
+        read2 = base+'raw_fastq/'+"{file}"+'_2.fastq.gz',
         reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
     output: base+'sam_sorted/'+'{file}'+'.sorted.bam'
     threads: 10
@@ -91,6 +91,7 @@ rule pair_unclassified_fastq:
     shell:
         f"""
         seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/mapped_not_classified_paired_fastq/
+        
         """
 
 rule map_extracted_fastq:
