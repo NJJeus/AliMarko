@@ -4,9 +4,11 @@ import glob
 import random
 
 
-base = "DATA/test_not_paired/"
+base = "DATA/external_rna_not_paired/"
+input_folder = "../external_rna/DATA/sra_russia/fastq_cleaned/fastq_not_paired/"
+ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
-files, = glob_wildcards(base+'raw_fastq/'+"{file}"+'.fastq.gz')
+files, = glob_wildcards(input_folder+"{file}"+'.fastq.gz')
 
 want_all = (expand(base + 'ictv_coverage/' + '{file}' + '.tsv', file=files))
 
@@ -15,9 +17,9 @@ rule all:
 
 rule map_raw_fastq:
     input: 
-        read1 = base+'raw_fastq/'+"{file}"+'.fastq.gz',
-        reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
-    output: base+'bam_sorted/'+'{file}'+'.sorted.bam'
+        read1 = input_folder + "{file}"+'.fastq.gz',
+        reference = ictv_db_folder + 'all_genomes.fasta'
+    output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 10
     conda:
         "envs/bwa.yaml"
@@ -29,7 +31,7 @@ rule map_raw_fastq:
     
 rule extract_mapped_sam_sorted:  
     input: base+'bam_sorted/'+'{file}'+'.sorted.bam'
-    output: base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam'
+    output: temp(base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam')
     threads: 10
     conda:
         "envs/bwa.yaml"
@@ -41,7 +43,7 @@ rule extract_mapped_sam_sorted:
 rule extract_mapped_fastq:
     input: base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam'
     output: 
-        read1=base+'mapped_fastq/'+"{file}"+'.fastq.gz'
+        read1=temp(base+'mapped_fastq/'+"{file}"+'.fastq.gz')
     threads: 10
     conda:
         "envs/bwa.yaml"
@@ -53,9 +55,9 @@ rule extract_mapped_fastq:
     
 rule kraken2:
     input: read1=base+'mapped_fastq/'+"{file}"+'.fastq.gz'
-    output: kraken2_report = base+"kraken_results/{file}.report",
-            kraken2_out = base+"kraken_results/{file}.out",
-            read1=base+'mapped_not_classified_fastq/'+"{file}"+'.fastq.gz'
+    output: kraken2_report = base+"kraken_results/{file}.report.gz",
+            kraken2_out = temp(base+"kraken_results/{file}.out"),
+            read1=temp(base+'mapped_not_classified_fastq/'+"{file}"+'.fastq.gz')
     params: 
             kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
             sample = lambda wildcards: wildcards.file
@@ -64,15 +66,16 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}.fastq.gz.tmp 
+        kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} --use-names --report {{output.kraken2_report}}.tmp --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}.fastq.gz.tmp 
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
+        gzip -c {{output.kraken2_report}}.tmp > {{output.kraken2_report}}; rm {{output.kraken2_report}}.tmp
         """
 
 rule map_extracted_fastq:
     input: 
         read1=base+'mapped_not_classified_fastq/'+"{file}"+'.fastq.gz',
-        reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
-    output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
+        reference = ictv_db_folder + 'all_genomes.fasta'
+    output: temp(base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam')
     threads: 10
     conda:
         "envs/bwa.yaml"
@@ -83,7 +86,7 @@ rule map_extracted_fastq:
         
 rule calculate_coverage:
     input: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
-    output: base + 'calculated_coverage/' + '{file}' + '.txt'
+    output: temp(base + 'calculated_coverage/' + '{file}' + '.txt')
     conda:
         "envs/bwa.yaml"
     shell:
@@ -93,7 +96,7 @@ rule calculate_coverage:
 
 rule convert_coverage:
     input: base + 'calculated_coverage/' + '{file}' + '.txt'
-    output: base + 'ictv_coverage/' + '{file}' + '.csv'
+    output: temp(base + 'ictv_coverage/' + '{file}' + '.csv')
     shell:
         """
         python scripts/convert_ictv.py -c {input} -o {output} -t ictv_tables
