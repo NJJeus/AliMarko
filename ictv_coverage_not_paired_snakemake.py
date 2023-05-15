@@ -33,6 +33,8 @@ rule extract_mapped_sam_sorted:
     input: base+'bam_sorted/'+'{file}'+'.sorted.bam'
     output: temp(base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam')
     threads: 10
+    priority:
+        2
     conda:
         "envs/bwa.yaml"
     shell:
@@ -45,6 +47,8 @@ rule extract_mapped_fastq:
     output: 
         read1=temp(base+'mapped_fastq/'+"{file}"+'.fastq.gz')
     threads: 10
+    priority:
+        3
     conda:
         "envs/bwa.yaml"
     shell:
@@ -64,6 +68,8 @@ rule kraken2:
     conda:
         "envs/kraken2.yaml"
     threads: 10
+    priority:
+        4
     shell: 
         f"""
         kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} --use-names --report {{output.kraken2_report}}.tmp --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}.fastq.gz.tmp 
@@ -77,6 +83,8 @@ rule map_extracted_fastq:
         reference = ictv_db_folder + 'all_genomes.fasta'
     output: temp(base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam')
     threads: 10
+    priority:
+        5
     conda:
         "envs/bwa.yaml"
     shell:
@@ -87,6 +95,8 @@ rule map_extracted_fastq:
 rule calculate_coverage:
     input: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     output: temp(base + 'calculated_coverage/' + '{file}' + '.txt')
+    priority:
+        6
     conda:
         "envs/bwa.yaml"
     shell:
@@ -97,6 +107,8 @@ rule calculate_coverage:
 rule convert_coverage:
     input: base + 'calculated_coverage/' + '{file}' + '.txt'
     output: temp(base + 'ictv_coverage/' + '{file}' + '.csv')
+    priority:
+        1000
     shell:
         """
         python scripts/convert_ictv.py -c {input} -o {output} -t ictv_tables
