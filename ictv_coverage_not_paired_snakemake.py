@@ -45,7 +45,7 @@ rule extract_mapped_sam_sorted:
 rule extract_mapped_fastq:
     input: base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam'
     output: 
-        read1=temp(base+'mapped_fastq/'+"{file}"+'.fastq.gz')
+        read1=base+'mapped_fastq/'+"{file}"+'.fastq.gz'
     threads: 10
     priority:
         3
@@ -106,7 +106,7 @@ rule calculate_coverage:
 
 rule convert_coverage:
     input: base + 'calculated_coverage/' + '{file}' + '.txt'
-    output: temp(base + 'ictv_coverage/' + '{file}' + '.csv')
+    output: base + 'ictv_coverage/' + '{file}' + '.csv'
     priority:
         1000
     shell:

@@ -4,7 +4,9 @@ import glob
 import random
 
 
-base = "DATA/test/"
+base = "DATA/external_rna_not_paired/"
+input_folder = "../external_rna/DATA/sra_russia/fastq_cleaned/fastq_paired/"
+ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 files, = glob_wildcards(base+'raw_fastq/'+"{file}"+'_1.fastq.gz')
 
@@ -19,11 +21,12 @@ rule all:
 
 rule map_raw_fastq:
     input: 
-        read1 = base+'raw_fastq/'+"{file}"+'_1.fastq.gz',
-        read2 = base+'raw_fastq/'+"{file}"+'_2.fastq.gz',
-        reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
+        read1 = input_folder+"{file}"+'_1.fastq.gz',
+        read2 = input_folder+"{file}"+'_2.fastq.gz',
+        reference = ictv_db_folder + 'all_genomes.fasta'
     output: base+'sam_sorted/'+'{file}'+'.sorted.bam'
     threads: 10
+    priority: 0 
     conda:
         "envs/bwa.yaml"
     shell:
@@ -36,6 +39,7 @@ rule extract_mapped_sam_sorted:
     input: base+'sam_sorted/'+'{file}'+'.sorted.bam'
     output: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sorted.bam'
     threads: 10
+    priority: 1
     conda:
         "envs/bwa.yaml"
     shell:
@@ -49,6 +53,7 @@ rule extract_mapped_fastq:
         read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
+    priority: 2
     conda:
         "envs/bwa.yaml"
     shell:
@@ -67,6 +72,7 @@ rule kraken2:
     params: 
             kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
             sample = lambda wildcards: wildcards.file
+    priority: 3
     conda:
         "envs/kraken2.yaml"
     threads: 10
@@ -86,6 +92,7 @@ rule pair_unclassified_fastq:
         read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
+    priority: 4
     conda:
         "envs/seqkit.yaml"
     shell:
@@ -98,9 +105,10 @@ rule map_extracted_fastq:
     input: 
         read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz',
-        reference = base + 'all_virus_reference/' + 'all_genomes.fasta'
+        reference = reference = ictv_db_folder + 'all_genomes.fasta'
     output: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.bam'
     threads: 10
+    priority: 5
     conda:
         "envs/bwa.yaml"
     shell:
@@ -111,6 +119,7 @@ rule map_extracted_fastq:
 rule calculate_coverage:
     input: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.bam'
     output: base + 'calculated_coverage/' + '{file}' + '.txt'
+    priority: 6
     conda:
         "envs/bwa.yaml"
     shell:
@@ -121,6 +130,7 @@ rule calculate_coverage:
 rule convert_coverage:
     input: base + 'calculated_coverage/' + '{file}' + '.txt'
     output: base + 'ictv_coverage/' + '{file}' + '.csv'
+    priority: 7
     shell:
         """
         python scripts/convert_ictv.py -c {input} -o {output} -t ictv_tables
