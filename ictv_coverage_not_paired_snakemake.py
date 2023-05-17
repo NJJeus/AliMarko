@@ -81,7 +81,7 @@ rule map_extracted_fastq:
     input: 
         read1=base+'mapped_not_classified_fastq/'+"{file}"+'.fastq.gz',
         reference = ictv_db_folder + 'all_genomes.fasta'
-    output: temp(base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam')
+    output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
     priority:
         5
