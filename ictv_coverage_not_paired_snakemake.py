@@ -10,10 +10,10 @@ ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 files, = glob_wildcards(input_folder+"{file}"+'.fastq.gz')
 
-want_all = (expand(base + 'ictv_coverage/' + '{file}' + '.tsv', file=files))
+want_all = (expand(f'{base}tmp/cov_tmp/{{file}}.txt', file=files))
 
 rule all:
-    input: base + 'result_coverage_table.tsv'
+    input: base + 'result_coverage_table.tsv',  want_all
 
 rule map_raw_fastq:
     input: 
@@ -119,6 +119,14 @@ rule convert_coverage:
         """
         python scripts/convert_ictv.py -c {input.coverage} -q {input.quality} -o {output} -t ictv_tables
         """
+rule generate_tmp_coverage_files:
+    input: 
+        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt'
+    output: f'{base}tmp/cov_tmp/{{file}}.txt'
+    shell:
+        """
+        python scripts/draw_coverage.py -c {input.coverage} -t ictv_tables -o {output}
+        """
         
 rule generalize_coverage:
     input: 
@@ -128,3 +136,4 @@ rule generalize_coverage:
         """
         python scripts/generalize_ictv.py -f {input} -o {output}
         """
+        
