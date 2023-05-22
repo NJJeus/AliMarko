@@ -92,26 +92,32 @@ rule map_extracted_fastq:
         bwa mem -t {threads} {input.reference} {input.read1} | samtools sort -@ {threads} -o {output} -
         """
         
-rule calculate_coverage:
+rule calculate_coverage_and_quality:
     input: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
-    output: temp(base + 'calculated_coverage/' + '{file}' + '.txt')
+    output: 
+        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
+        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
     priority:
         6
     conda:
         "envs/bwa.yaml"
     shell:
         """
-        samtools coverage {input} > {output}
+        samtools coverage {input} > {output.coverage}
+        samtools view {input} | awk '{{print $3 "\t" $5}}' > {output.quality}
         """
 
 rule convert_coverage:
-    input: base + 'calculated_coverage/' + '{file}' + '.txt'
-    output: base + 'ictv_coverage/' + '{file}' + '.csv'
+    input: 
+        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
+        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
+    output: 
+        base + 'ictv_coverage/' + '{file}' + '.csv'
     priority:
         1000
     shell:
         """
-        python scripts/convert_ictv.py -c {input} -o {output} -t ictv_tables
+        python scripts/convert_ictv.py -c {input.coverage} -q {input.quality} -o {output} -t ictv_tables
         """
         
 rule generalize_coverage:
