@@ -10,7 +10,7 @@ ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 files, = glob_wildcards(input_folder+"{file}"+'.fastq.gz')
 
-want_all = (expand(f'{base}tmp/cov_tmp/{{file}}.txt', file=files))
+want_all = (expand(f'{base}drawings/{{file}}/', file=files))
 
 rule all:
     input: base + 'result_coverage_table.tsv',  want_all
@@ -18,7 +18,7 @@ rule all:
 rule map_raw_fastq:
     input: 
         read1 = input_folder + "{file}"+'.fastq.gz',
-        reference = ictv_db_folder + 'all_genomes.fasta'
+        reference = ictv_db_folder +n'all_genomes.fasta'
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 10
     conda:
@@ -123,11 +123,26 @@ rule generate_tmp_coverage_files:
     input: 
         coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt'
     output: f'{base}tmp/cov_tmp/{{file}}.txt'
+    priority:
+        1001
     shell:
         """
         python scripts/draw_coverage.py -c {input.coverage} -t ictv_tables -o {output}
         """
         
+rule plot_coverage:
+    input:
+        bam=base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam',
+        coverage=f'{base}tmp/cov_tmp/{{file}}.txt'
+    output: directory(f'{base}drawings/{{file}}/')
+    params:
+        reference=ictv_db_folder + 'all_genomes.fasta'
+    shell:
+        """
+        bash scripts/plot_coverage.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output}
+        """
+
+
 rule generalize_coverage:
     input: 
         expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files)
