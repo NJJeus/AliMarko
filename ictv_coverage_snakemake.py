@@ -4,25 +4,26 @@ import glob
 import random
 
 
-base = "DATA/external_rna_not_paired/"
-input_folder = "../external_rna/DATA/sra_russia/fastq_cleaned/fastq_paired/"
+base = "DATA/test/"
+input_folder = "DATA/test/raw_fastq/"
 ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
-files, = glob_wildcards(input_folder+"{file}"+'_1.fastq.gz')
-
-suffix_1 = "_R1.fastq.gz"
-suffix_2 = "_R2.fastq.gz"
 
 
-want_all = (expand(base + 'ictv_coverage/' + '{file}' + '.tsv', file=files))
+suffix_1 = "_1.fq.gz"
+suffix_2 = "_2.fq.gz"
+
+files, = glob_wildcards(input_folder+"{file}"+suffix_1)
+
+want_all = (expand(f'{base}drawings/{{file}}/', file=files))
 
 rule all:
-    input: base + 'result_coverage_table.tsv'
+    input: base + 'result_coverage_table.tsv',  want_all
 
 rule pair_raw_fastq:
     input:
-        read1 = input_folder+"{file}"+'_1.fastq.gz',
-        read2 = input_folder+"{file}"+'_2.fastq.gz'
+        read1 = input_folder+"{file}"+suffix_1,
+        read2 = input_folder+"{file}"+suffix_2
     output:
         read1=temp(base+'paired_raw_fastq/'+"{file}"+'_1.fastq.gz'),
         read2=temp(base+'paired_raw_fastq/'+"{file}"+'_2.fastq.gz')
@@ -41,7 +42,7 @@ rule map_raw_fastq:
         read1=base+'paired_raw_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'paired_raw_fastq/'+"{file}"+'_2.fastq.gz',
         reference = ictv_db_folder + 'all_genomes.fasta'
-    output: temp(base+'sam_sorted/'+'{file}'+'.sorted.bam')
+    output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 10
     priority: 1
     conda:
@@ -52,9 +53,9 @@ rule map_raw_fastq:
         """
     
     
-rule extract_mapped_sam_sorted:  
-    input: base+'sam_sorted/'+'{file}'+'.sorted.bam'
-    output: temp(base+'mapped_sam_sorted/'+'{file}'+'_mapped.sorted.bam')
+rule extract_mapped_bam_sorted:  
+    input: base+'bam_sorted/'+'{file}'+'.sorted.bam'
+    output: temp(base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam')
     threads: 10
     priority: 2
     conda:
@@ -65,7 +66,7 @@ rule extract_mapped_sam_sorted:
         """
 
 rule extract_mapped_fastq:
-    input: base+'mapped_sam_sorted/'+'{file}'+'_mapped.sorted.bam'
+    input: base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam'
     output: 
         read1=temp(base+'mapped_fastq/'+"{file}"+'_1.fastq.gz'),
         read2=temp(base+'mapped_fastq/'+"{file}"+'_2.fastq.gz')
@@ -122,7 +123,7 @@ rule map_extracted_fastq:
         read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz',
         reference = ictv_db_folder + 'all_genomes.fasta'
-    output: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.bam'
+    output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
     priority: 6
     conda:
@@ -132,26 +133,59 @@ rule map_extracted_fastq:
         bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
         """
         
-rule calculate_coverage:
-    input: base + 'unclassified_sorted_sam/' + '{file}' + '.sorted.bam'
-    output: base + 'calculated_coverage/' + '{file}' + '.txt'
-    priority: 7
+rule calculate_coverage_and_quality:
+    input: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
+    output: 
+        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
+        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
+    priority:
+        6
     conda:
         "envs/bwa.yaml"
     shell:
         """
-        samtools coverage {input} > {output}
+        samtools coverage {input} > {output.coverage}
+        samtools view {input} | awk '{{print $3 "\t" $5}}' > {output.quality}
         """
 
 rule convert_coverage:
-    input: base + 'calculated_coverage/' + '{file}' + '.txt'
-    output: base + 'ictv_coverage/' + '{file}' + '.csv'
-    priority: 8
+    input: 
+        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
+        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
+    output: 
+        base + 'ictv_coverage/' + '{file}' + '.csv'
+    priority:
+        7
     shell:
         """
-        python scripts/convert_ictv.py -c {input} -o {output} -t ictv_tables
+        python scripts/convert_ictv.py -c {input.coverage} -q {input.quality} -o {output} -t ictv_tables
+        """
+rule generate_tmp_coverage_files:
+    input: 
+        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt'
+    output: f'{base}tmp/cov_tmp/{{file}}.txt'
+    priority:
+        8
+    shell:
+        """
+        python scripts/draw_coverage.py -c {input.coverage} -t ictv_tables -o {output}
         """
         
+rule plot_coverage:
+    input:
+        bam=base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam',
+        coverage=f'{base}tmp/cov_tmp/{{file}}.txt'
+    output: directory(f'{base}drawings/{{file}}/')
+    priority:
+        9
+    params:
+        reference=ictv_db_folder + 'all_genomes.fasta'
+    shell:
+        """
+        bash scripts/plot_coverage.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output}
+        """
+
+
 rule generalize_coverage:
     input: 
         expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files)
@@ -160,3 +194,4 @@ rule generalize_coverage:
         """
         python scripts/generalize_ictv.py -f {input} -o {output}
         """
+        

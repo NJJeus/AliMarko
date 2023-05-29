@@ -4,8 +4,8 @@ import glob
 import random
 
 
-base = "DATA/external_rna_not_paired/"
-input_folder = "../external_rna/DATA/sra_russia/fastq_cleaned/fastq_not_paired/"
+base = "DATA/test/"
+input_folder = "DATA/test/raw_fastq/"
 ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 files, = glob_wildcards(input_folder+"{file}"+'.fastq.gz')
@@ -18,7 +18,7 @@ rule all:
 rule map_raw_fastq:
     input: 
         read1 = input_folder + "{file}"+'.fastq.gz',
-        reference = ictv_db_folder +n'all_genomes.fasta'
+        reference = ictv_db_folder +'all_genomes.fasta'
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 10
     conda:
