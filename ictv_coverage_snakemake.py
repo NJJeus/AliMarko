@@ -20,27 +20,13 @@ want_all = (expand(f'{base}drawings/{{file}}/', file=files))
 rule all:
     input: base + 'result_coverage_table.tsv',  want_all
 
-rule pair_raw_fastq:
-    input:
-        read1 = input_folder+"{file}"+suffix_1,
-        read2 = input_folder+"{file}"+suffix_2
-    output:
-        read1=temp(base+'paired_raw_fastq/'+"{file}"+'_1.fastq.gz'),
-        read2=temp(base+'paired_raw_fastq/'+"{file}"+'_2.fastq.gz')
-    threads: 10
-    priority: 0
-    conda:
-        "envs/seqkit.yaml"
-    shell:
-        f"""
-        seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/paired_raw_fastq/
-        """
+
     
 
 rule map_raw_fastq:
     input: 
-        read1=base+'paired_raw_fastq/'+"{file}"+'_1.fastq.gz',
-        read2=base+'paired_raw_fastq/'+"{file}"+'_2.fastq.gz',
+        read1 = input_folder+"{file}"+suffix_1,
+        read2 = input_folder+"{file}"+suffix_2,
         reference = ictv_db_folder + 'all_genomes.fasta'
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 10
@@ -131,6 +117,7 @@ rule map_extracted_fastq:
     shell:
         """
         bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
+        samtools index {output}
         """
         
 rule calculate_coverage_and_quality:
@@ -146,6 +133,7 @@ rule calculate_coverage_and_quality:
         """
         samtools coverage {input} > {output.coverage}
         samtools view {input} | awk '{{print $3 "\t" $5}}' > {output.quality}
+        sed -i '/^\*/d' {output.quality}
         """
 
 rule convert_coverage:

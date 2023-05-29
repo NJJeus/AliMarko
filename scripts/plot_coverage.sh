@@ -37,5 +37,6 @@ do
 		-pos "${rname}:600-${endpos}" \
 		-ref $REFERENCE \
 		-bamplot coverage read \
-		-draw coordinates bamplot -no_target_line;
+		-draw coordinates bamplot -no_target_line \
+        -title "${BAMNAME}_${species}_${rname}";
 done
