@@ -10,8 +10,8 @@ ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 
 
-suffix_1 = "_1.fq.gz"
-suffix_2 = "_2.fq.gz"
+suffix_1 = "_1.fq"
+suffix_2 = "_2.fq"
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
@@ -29,20 +29,21 @@ rule map_raw_fastq:
         read2 = input_folder+"{file}"+suffix_2,
         reference = ictv_db_folder + 'all_genomes.fasta'
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
-    threads: 10
+    threads: 20
     priority: 1
     conda:
         "envs/bwa.yaml"
     shell:
         """
         bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
+        
         """
     
     
 rule extract_mapped_bam_sorted:  
     input: base+'bam_sorted/'+'{file}'+'.sorted.bam'
     output: temp(base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam')
-    threads: 10
+    threads: 20
     priority: 2
     conda:
         "envs/bwa.yaml"
@@ -54,9 +55,9 @@ rule extract_mapped_bam_sorted:
 rule extract_mapped_fastq:
     input: base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam'
     output: 
-        read1=temp(base+'mapped_fastq/'+"{file}"+'_1.fastq.gz'),
-        read2=temp(base+'mapped_fastq/'+"{file}"+'_2.fastq.gz')
-    threads: 10
+        read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
+    threads: 20
     priority: 3
     conda:
         "envs/bwa.yaml"
@@ -71,8 +72,8 @@ rule kraken2:
            read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
     output: kraken2_report = base+"kraken_results/{file}.report",
             kraken2_out = temp(base+"kraken_results/{file}.out"),
-            read1=temp(base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq.gz'),
-            read2=temp(base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz')
+            read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq.gz',
+            read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     params: 
             kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
             sample = lambda wildcards: wildcards.file

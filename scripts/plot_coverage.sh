@@ -34,7 +34,7 @@ do
 		-draw coordinates bamplot coverage base \
 		-bam $BAMFILE \
 		-out "${DIR}/${species}/${rname}.png"\
-		-pos "${rname}:600-${endpos}" \
+		-pos "${rname}:552-${endpos}" \
 		-ref $REFERENCE \
 		-bamplot coverage read \
 		-draw coordinates bamplot -no_target_line \
