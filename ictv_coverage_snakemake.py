@@ -137,10 +137,28 @@ rule calculate_coverage_and_quality:
         sed -i '/^\*/d' {output.quality}
         """
 
+rule count_snp:
+    input: 
+        coverage = base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
+        bam= base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
+    output:
+        base + '/snps/{file}.csv'
+    conda:
+        "envs/bcftools.yaml"
+    params:
+        reference=ictv_db_folder + 'all_genomes.fasta',
+        threshold=10
+    shell:
+        """
+        bash scripts/calculate_variance.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output} -t={params.threshold}
+        """
+    
+        
 rule convert_coverage:
     input: 
         coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
-        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
+        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt',
+        snps= base + '/snps/{file}.csv'
     output: 
         base + 'ictv_coverage/' + '{file}' + '.csv'
     priority:

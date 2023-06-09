@@ -43,7 +43,7 @@ else:
 ictv_data = pd.read_excel(f'{tables_folder}/ictv_taxo.xlsx')
 taxo_index = pd.read_csv(f'{tables_folder}/genbank_accessions.csv', index_col=0)
 
-# Rad quality file
+# Read quality file
 quality = pd.read_csv(quality_file, header=None, names=['rname', 'quality'], sep='\t')
 print(quality.rname.apply(lambda x: x.split('|')))
 quality.rname = quality.rname.apply(lambda x: x.split('|')[1])
