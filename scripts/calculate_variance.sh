@@ -29,11 +29,12 @@ done
 BAMNAME=$(echo $(basename $BAMFILE) |  cut -d '.' -f 1)
 rm -f $OUT
 touch $OUT
+echo "rname,snps,deep_sites" >> $OUT
 cat $COVFILE | tail -n +2|  awk "\$6 > $THRESHOLD" | cut -f1 | while read line;
 do
     echo $line
-    n_var=$(bcftools mpileup  -Ov -f $REFERENCE \
-    $BAMFILE -r $line |  \
-    bcftools call -mv -Ov --ploidy 1 | grep -v '#' | awk '$6 > 200' | wc -l)
-    echo "$line, $n_var" >> ${OUT}
+    n_var=$(freebayes -f $REFERENCE $BAMFILE -p 1 -r $line \
+    | vcffilter -f "QUAL > 20 & DP > 10" | grep -v '#' | wc -l)
+    depth=$(samtools depth  $BAMFILE -r $line | awk '$3 > 10' | wc -l)
+    echo "$line, $n_var, $depth" >> ${OUT}
 done

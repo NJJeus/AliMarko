@@ -15,6 +15,7 @@ parser.add_argument('-c', '--coverage', type=str, help='A file with samtools cov
 parser.add_argument('-q', '--quality', type=str, help='A file with rname and quality columns from samtools view output')
 parser.add_argument('-o', '--output', type=str, help='An output file')
 parser.add_argument('-t', '--tables_folder', type=str, help='A folder with tables ictv_taxo and genbank accessions')
+parser.add_argument('-s', '--snps_file', type=str, help='A file with rname, number of snp, number of deep sites as columns and virus samples as rows')
 
 args = parser.parse_args()
 
@@ -38,20 +39,33 @@ if args.tables_folder:
     if_condition(os.path.isdir(args.tables_folder), "tables folder doesn't exist")
     tables_folder = args.tables_folder
 else:
-    if_condition(False, 'Missed -t argument') 
+    if_condition(False, 'Missed -t argument')
 
+if args.snps_file:
+    if_condition(os.path.isfile(args.snps_file), "snps file doesn't exist")
+    snps_file = args.snps_file
+else:
+    if_condition(False, 'Missed -s argument')    
+
+    
+    
 ictv_data = pd.read_excel(f'{tables_folder}/ictv_taxo.xlsx')
 taxo_index = pd.read_csv(f'{tables_folder}/genbank_accessions.csv', index_col=0)
 
 # Read quality file
 quality = pd.read_csv(quality_file, header=None, names=['rname', 'quality'], sep='\t')
-print(quality.rname.apply(lambda x: x.split('|')))
 quality.rname = quality.rname.apply(lambda x: x.split('|')[1])
 quality = quality.groupby('rname').mean()
+
 
 # Read samtools coverage output and drop excess columns
 data = pd.read_table(coverage_file).rename(columns={'#rname': 'rname'}).drop(['numreads', 'covbases',
        'meandepth', 'meanbaseq', 'meanmapq'], axis=1)
+
+#read an snps file and condatenate with the coverage file
+snps = pd.read_csv(snps_file)
+data = pd.merge(left=data, right=snps, left_on='rname', right_on='rname', how='left') # Get index of all accession number
+
 
 # rname contains database name, accession number and version. We need only an accession number
 data['rname'] = data['rname'].apply(lambda x: x.split('|')[1])
@@ -69,27 +83,33 @@ data = pd.merge(left=data, right=ictv_data.reset_index(), left_on='ictv_taxo_ind
 # Generalize fragments of one virus
 data[['coverage', 'quality']] = data[['coverage', 'quality']]  * 0.01
 data['len'] = data.endpos - data.startpos
+data['fragments_len'] = data['len'].copy()
 data[['weighted_coverage', 'weighted_quality']] = (data[['coverage', 'quality']].T * data['len']).T
 
 
 agg_all_columns_dict = dict()
-agg_all_columns_dict.update({'len':'sum', 'weighted_coverage':'sum', 'weighted_quality':'sum'})
-agg_all_columns_dict.update({'coverage': lambda x: [i for i in list(x)]})
+agg_all_columns_dict.update({'len':'sum', 'snps': 'sum', 'weighted_coverage':'sum', 'weighted_quality':'sum', 'deep_sites': 'sum'})
+agg_all_columns_dict.update({'coverage': lambda x: [i for i in list(x)], 'fragments_len': lambda x: [i for i in list(x)]})
 agg_all_columns_dict.update({i:'first' for i in ['rname', 'Realm', 'Kingdom',
        'Subkingdom', 'Phylum', 'Subphylum', 'Class', 'Order', 'Family', 'Genus', 'Species',
               'Virus name(s)', 'Virus GENBANK accession', 'Host source']})
 data = data.groupby('Species').agg(agg_all_columns_dict)
-data['fragments_coverage'] = data['coverage'].copy()
+data['fragments_coverage'] = data['coverage'].copy().apply(lambda x: [round(i, 2) for i in x])
 
 
-data['coverage'] = data.weighted_coverage / data.len
-data['quality'] = data.weighted_quality / data.len
+data['coverage'] = (data.weighted_coverage / data.len).round(2)
+data['quality'] = (data.weighted_quality / data.len * 100).round(2)
 data = data.sort_values(by='coverage', ascending=False)
+data['snp_portion'] = data['snps'] / data['deep_sites']
+data['deep_sites'] = data['deep_sites'].astype('int')
 
 # Clean and output
-data = data[['Virus name(s)', 'Host source', 'coverage', 'quality', 'len', 'fragments_coverage', 'Realm', 'Kingdom', 'Subkingdom', 'Phylum', 'Subphylum', 'Class',
+data = data[['Virus name(s)', 'Host source', 'len', 'deep_sites', 'coverage',  'quality', 'snps', 'snp_portion',
+             'fragments_len', 'fragments_coverage', 'Realm', 'Kingdom', 'Subkingdom', 'Phylum', 'Subphylum', 'Class',
    'Order', 'Family', 'Genus', 'Species',
    'Virus GENBANK accession']]
 
 data.to_csv(output_file)
+
+
 

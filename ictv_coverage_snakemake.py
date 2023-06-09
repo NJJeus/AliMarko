@@ -165,7 +165,7 @@ rule convert_coverage:
         7
     shell:
         """
-        python scripts/convert_ictv.py -c {input.coverage} -q {input.quality} -o {output} -t ictv_tables
+        python scripts/convert_ictv.py -c {input.coverage} -q {input.quality} -o {output} -t ictv_tables -s {input.snps}
         """
 rule generate_tmp_coverage_files:
     input: 

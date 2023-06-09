@@ -2,5 +2,9 @@ name: kraken2
 channels:
   - defaults
   - bioconda
+  - conda-forge
 dependencies:
   - freebayes
+  - bcftools
+  - libgcc-ng=12.2.0
+  - samtools=1.17
