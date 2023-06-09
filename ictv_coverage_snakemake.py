@@ -144,7 +144,7 @@ rule count_snp:
     output:
         base + '/snps/{file}.csv'
     conda:
-        "envs/bcftools.yaml"
+        "envs/freebayes.yaml"
     params:
         reference=ictv_db_folder + 'all_genomes.fasta',
         threshold=10

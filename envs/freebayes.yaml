@@ -1,0 +1,6 @@
+name: kraken2
+channels:
+  - defaults
+  - bioconda
+dependencies:
+  - freebayes
