@@ -4,18 +4,18 @@ import glob
 import random
 
 
-base = "DATA/test/"
-input_folder = "DATA/test/raw_fastq/"
+base = "DATA/bats/"
+input_folder = "DATA/bats/raw_fastq/"
 ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 
 
-suffix_1 = "_1.fq"
-suffix_2 = "_2.fq"
+suffix_1 = "R1.fastq.gz"
+suffix_2 = "R2.fastq.gz"
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
-want_all = (expand(f'{base}drawings/{{file}}/', file=files))
+want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
 
 rule all:
     input: base + 'result_coverage_table.tsv',  want_all
@@ -148,6 +148,8 @@ rule count_snp:
     params:
         reference=ictv_db_folder + 'all_genomes.fasta',
         threshold=10
+    priority:
+        7
     shell:
         """
         bash scripts/calculate_variance.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output} -t={params.threshold}
@@ -157,25 +159,15 @@ rule count_snp:
 rule convert_coverage:
     input: 
         coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
-        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt',
         snps= base + '/snps/{file}.csv'
     output: 
-        base + 'ictv_coverage/' + '{file}' + '.csv'
+        main=base + 'ictv_coverage/' + '{file}' + '.csv',
+        tmp=f'{base}tmp/cov_tmp/{{file}}.txt'
     priority:
-        7
+        9
     shell:
         """
-        python scripts/convert_ictv.py -c {input.coverage} -q {input.quality} -o {output} -t ictv_tables -s {input.snps}
-        """
-rule generate_tmp_coverage_files:
-    input: 
-        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt'
-    output: f'{base}tmp/cov_tmp/{{file}}.txt'
-    priority:
-        8
-    shell:
-        """
-        python scripts/draw_coverage.py -c {input.coverage} -t ictv_tables -o {output}
+        python scripts/convert_ictv.py -c {input.coverage} -o {output.main} -t ictv_tables -s {input.snps} -m {output.tmp}
         """
         
 rule plot_coverage:
@@ -184,12 +176,24 @@ rule plot_coverage:
         coverage=f'{base}tmp/cov_tmp/{{file}}.txt'
     output: directory(f'{base}drawings/{{file}}/')
     priority:
-        9
+        15
     params:
         reference=ictv_db_folder + 'all_genomes.fasta'
     shell:
         """
         bash scripts/plot_coverage.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output}
+        """
+        
+rule make_html:
+    input:
+        coverage=base + 'ictv_coverage/' + '{file}' + '.csv',
+        drawings=base+'drawings/'+ '{file}'
+    output: f'{base}/htmls/{{file}}.html'
+    priority:
+        14
+    shell:
+        """
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output}
         """
 
 
