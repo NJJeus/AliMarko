@@ -30,6 +30,7 @@ do
 	species=$(echo $line | cut -f 1 -d ',');
 	rname=$(echo $line | cut -f 2 -d ',');
 	endpos=$(echo $line | cut -f 3 -d ',');
+    echo $BAMFILE  $species $rname $endpos;
 	bamsnap \
 		-draw coordinates bamplot coverage base \
 		-bam $BAMFILE \

@@ -77,7 +77,7 @@ for index, item in ictv_data.iterrows():
 taxo_index = pd.DataFrame({'ictv_taxo_index':indeces}, index=accessions)
 
 data = pd.merge(left=data, right=snps, left_on='rname', right_on='rname', how='left')
-data['snp_portion'] = data['snps'] / data['deep_sites']
+data['nucleotide_similarity'] = 1 - data['snps'] / data['deep_sites']
 
 # rname contains database name, accession number and version. We need only an accession number
 data['tmp_rname'] = data['rname'].copy()
@@ -95,7 +95,7 @@ data[['coverage', 'meanmapq']] = data[['coverage', 'meanmapq']]  * 0.01
 data['len'] = data.endpos - data.startpos + 1 
 data[['weighted_coverage', 'weighted_quality', 'weighted_meandepth']] = (data[['coverage', 'meanmapq', 'meandepth']].T * data['len']).T
 
-per_fragment_columns = ['len', 'coverage', 'meanmapq', 'meandepth', 'deep_sites', 'snp_portion']
+per_fragment_columns = ['len', 'coverage', 'meanmapq', 'meandepth', 'deep_sites', 'nucleotide_similarity', 'snps']
 data[[f'fragments_{c}' for c in per_fragment_columns]] = data[per_fragment_columns].copy()
 
 
@@ -104,7 +104,7 @@ agg_all_columns_dict = dict()
 ## summing
 agg_all_columns_dict.update({i:'sum' for i in ['len', 'snps', 'deep_sites', 'weighted_coverage', 'weighted_quality', 'weighted_meandepth']})
 ## Generate list with values for all fragment
-agg_all_columns_dict.update({i:lambda x: [round(c, 2) for c in list(x)] for i in [f'fragments_{c}' for c in per_fragment_columns]})
+agg_all_columns_dict.update({i:lambda x: [round(c, 4) for c in list(x)] for i in [f'fragments_{c}' for c in per_fragment_columns]})
 agg_all_columns_dict.update({'tmp_rname': lambda x: list(x)})
 agg_all_columns_dict.update({i:'first' for i in ['rname', 'Realm', 'Kingdom',
        'Subkingdom', 'Phylum', 'Subphylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Virus isolate designation',
@@ -117,7 +117,7 @@ data['coverage'] = (data.weighted_coverage / data.len).round(2)
 data['meanmapq'] = (data.weighted_quality / data.len * 100).round(2)
 data['meandepth'] = (data.weighted_meandepth / data.len).round(2)
 data = data.sort_values(by='coverage', ascending=False)
-data['snp_portion'] = data['snps'] / data['deep_sites']
+data['nucleotide_similarity'] = 1 - data['snps'] / data['deep_sites']
 data['deep_sites'] = data['deep_sites'].astype('int')
 
 indeces = []
@@ -135,7 +135,7 @@ tmp_pic_data.to_csv(tmp_output, header=False)
 
 
 # Clean and output
-data = data[['Virus name(s)', 'Host source', 'len', 'deep_sites', 'coverage', 'meandepth',  'meanmapq', 'snps', 'snp_portion',
+data = data[['Virus name(s)', 'Host source', 'len', 'deep_sites', 'coverage', 'meandepth',  'meanmapq', 'snps', 'nucleotide_similarity',
              *[f'fragments_{c}' for c in per_fragment_columns], 'Virus GENBANK accession', 'Realm', 'Kingdom', 'Subkingdom', 'Phylum', 'Subphylum', 'Class',
    'Order', 'Family', 'Genus', 'Species']]
 

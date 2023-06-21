@@ -10,8 +10,8 @@ ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 
 
-suffix_1 = "R1.fastq.gz"
-suffix_2 = "R2.fastq.gz"
+suffix_1 = "_R1.fastq.gz"
+suffix_2 = "_R2.fastq.gz"
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
@@ -44,7 +44,7 @@ rule extract_mapped_bam_sorted:
     input: base+'bam_sorted/'+'{file}'+'.sorted.bam'
     output: temp(base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam')
     threads: 20
-    priority: 2
+    priority: 4
     conda:
         "envs/bwa.yaml"
     shell:
@@ -58,7 +58,7 @@ rule extract_mapped_fastq:
         read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 20
-    priority: 3
+    priority: 7
     conda:
         "envs/bwa.yaml"
     shell:
@@ -97,22 +97,41 @@ rule pair_unclassified_fastq:
         read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
-    priority: 5
+    priority: 13
     conda:
         "envs/seqkit.yaml"
     shell:
         f"""
         seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/mapped_not_classified_paired_fastq/
+        
         """
+        
+rule deduplicated_fastq:
+    input: 
+        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
+    output:
+        read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz'
+    conda:
+        "envs/fastp.yaml"
+    priority:
+        17
+    shell:
+        """
+        fastp -i {input.read1} -I {input.read2} -o {output.read1} -O {output.read2}
+        """
+        
+    
 
 rule map_extracted_fastq:
     input: 
-        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
-        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz',
+        read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz',
         reference = ictv_db_folder + 'all_genomes.fasta'
     output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
-    priority: 6
+    priority: 20
     conda:
         "envs/bwa.yaml"
     shell:
@@ -127,7 +146,7 @@ rule calculate_coverage_and_quality:
         coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
         quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
     priority:
-        6
+        24
     conda:
         "envs/bwa.yaml"
     shell:
@@ -149,7 +168,7 @@ rule count_snp:
         reference=ictv_db_folder + 'all_genomes.fasta',
         threshold=10
     priority:
-        7
+        29
     shell:
         """
         bash scripts/calculate_variance.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output} -t={params.threshold}
@@ -164,7 +183,7 @@ rule convert_coverage:
         main=base + 'ictv_coverage/' + '{file}' + '.csv',
         tmp=f'{base}tmp/cov_tmp/{{file}}.txt'
     priority:
-        9
+        32
     shell:
         """
         python scripts/convert_ictv.py -c {input.coverage} -o {output.main} -t ictv_tables -s {input.snps} -m {output.tmp}
@@ -176,9 +195,11 @@ rule plot_coverage:
         coverage=f'{base}tmp/cov_tmp/{{file}}.txt'
     output: directory(f'{base}drawings/{{file}}/')
     priority:
-        15
+        37
     params:
         reference=ictv_db_folder + 'all_genomes.fasta'
+    conda:
+        "envs/bamsnap.yaml"
     shell:
         """
         bash scripts/plot_coverage.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output}
@@ -190,7 +211,7 @@ rule make_html:
         drawings=base+'drawings/'+ '{file}'
     output: f'{base}/htmls/{{file}}.html'
     priority:
-        14
+        39
     shell:
         """
         python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output}
