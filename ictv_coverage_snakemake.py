@@ -6,7 +6,7 @@ import random
 
 base = "DATA/test/"
 input_folder = "DATA/test/raw_fastq/"
-ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
+genome_reference = 'virus_reference.fa'
 
 
 
@@ -26,7 +26,7 @@ rule map_raw_fastq:
     input: 
         read1 = input_folder+"{file}"+suffix_1,
         read2 = input_folder+"{file}"+suffix_2,
-        reference = ictv_db_folder + 'all_genomes.fasta'
+        reference = genome_reference
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 20
     priority: 1
@@ -126,7 +126,7 @@ rule map_extracted_fastq:
     input: 
         read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz',
-        reference = ictv_db_folder + 'all_genomes.fasta'
+        reference = genome_reference
     output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
     priority: 20
@@ -163,7 +163,7 @@ rule count_snp:
     conda:
         "envs/freebayes.yaml"
     params:
-        reference=ictv_db_folder + 'all_genomes.fasta',
+        reference = genome_reference
         threshold=10
     priority:
         29
@@ -195,7 +195,7 @@ rule plot_coverage:
     priority:
         37
     params:
-        reference=ictv_db_folder + 'all_genomes.fasta'
+        reference=genome_reference
     conda:
         "envs/bamsnap.yaml"
     shell:
