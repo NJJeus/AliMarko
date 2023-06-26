@@ -3,4 +3,5 @@ Pipeline for Virus Sequence Detection
 Requirements:
 * snakemake
 * mamba
-* bamsnap installed from https://github.com/NJJeus/bamsnap/tree/master
+* kraken database
+* fasta fiel with reference sequences
