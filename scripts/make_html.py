@@ -44,11 +44,11 @@ sample_name = os.path.splitext(os.path.basename(ictv_coverage_file))[0]
 ictv_coverage = pd.read_csv(ictv_coverage_file)
 
 introduction_frame = ictv_coverage[['Virus name(s)', 'Host source',
-               'coverage', 'meandepth', 'Genus']][:15]
-introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus']
+               'coverage', 'meandepth', 'Genus', 'Family', 'Realm']][:50]
+introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
 introduction_table = introduction_frame.to_numpy()
 
-ictv_drawings = ictv_coverage.query('coverage > 0.2').set_index('Host source')
+ictv_drawings = ictv_coverage.query('coverage > 0.1').set_index('Host source')
 
 ictv_drawings['genbank_list'] = ictv_drawings['Virus GENBANK accession'].apply(lambda i :
                                                                        [el.split(":")[-1] for el in i.replace(' ', '').split(';')])
@@ -74,12 +74,20 @@ for host, row in ictv_drawings.iterrows():
                 continue
             with open(picture_path, "rb") as image_file:
                 encoded_image = base64.b64encode(image_file.read()).decode()
-                images.append(f'<img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/>')
+                images.append(f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>')
         images = '\n'.join(images)
 
         viruses.update({f'<h3>{virus_name}</h3>':styles.Table(virus_list, ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ',' SNP Count']).make_table() + images})
 
     host_dict.update({f'<h2>{host}</h2>':styles.Details(viruses).make_details()})
+
+
+order = [f'<h2>{host}</h2>' for host in ['vertebrates', 'invertebrates', 'fungi', 'plants', 'algae', 'protists', 'bacteria', 'archaea']]
+def key_func(x):
+    return order.index(x)
+host_dict = sorted(host_dict.items(), key=lambda x: key_func(x[0]))
+host_dict = {key:value for key, value in host_dict}
+
     
 style = styles.set_style
 

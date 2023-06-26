@@ -4,14 +4,14 @@ import glob
 import random
 
 
-base = "DATA/bats/"
-input_folder = "DATA/bats/raw_fastq/"
+base = "DATA/test/"
+input_folder = "DATA/test/raw_fastq/"
 ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
 
 
 
-suffix_1 = "_R1.fastq.gz"
-suffix_2 = "_R2.fastq.gz"
+suffix_1 = "_1.fq"
+suffix_2 = "_2.fq"
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
@@ -19,7 +19,6 @@ want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
 
 rule all:
     input: base + 'result_coverage_table.tsv',  want_all
-
 
     
 
@@ -35,7 +34,7 @@ rule map_raw_fastq:
         "envs/bwa.yaml"
     shell:
         """
-        bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
+        bwa mem  -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
         
         """
     
@@ -71,7 +70,7 @@ rule kraken2:
     input: read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
            read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
     output: kraken2_report = base+"kraken_results/{file}.report",
-            kraken2_out = temp(base+"kraken_results/{file}.out"),
+            kraken2_out = base+"kraken_results/{file}.out",
             read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq.gz',
             read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     params: 
@@ -105,24 +104,23 @@ rule pair_unclassified_fastq:
         seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/mapped_not_classified_paired_fastq/
         
         """
-        
-rule deduplicated_fastq:
-    input: 
+    
+    
+rule deduplicate_fastq:
+    input:
         read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
     output:
         read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz'
+    threads: 10
+    priority: 13
     conda:
         "envs/fastp.yaml"
-    priority:
-        17
     shell:
         """
-        fastp -i {input.read1} -I {input.read2} -o {output.read1} -O {output.read2}
+        fastp -w {threads} -i {input.read1} -I {input.read2} -o {output.read1} -O {output.read2}
         """
-        
-    
 
 rule map_extracted_fastq:
     input: 
@@ -136,7 +134,7 @@ rule map_extracted_fastq:
         "envs/bwa.yaml"
     shell:
         """
-        bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
+        bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools view -q 20 -h - | samtools sort -@ {threads} -o {output} - 
         samtools index {output}
         """
         

@@ -4,6 +4,22 @@ set_style = """
 <head>
 	<title>Sample Name</title>
 	<style>
+        .tableFixHead {
+        overflow-y: auto; /* make the table scrollable if height is more than 200 px  */
+        max-height: 500px; /* gives an initial height of 200px to the table */
+        width: 50%;
+        margin:auto;
+        text-align: center;
+                      }
+                      
+        
+        .tableFixHead thead th {
+        position: sticky; /* make the table heads sticky */
+        top: 0px; /* table head will be placed from the top of the table and sticks to it */
+        text-align: center;
+                                }
+                                
+                                
         body {
 			background-color: #f1f1f1;
 			font-family: Arial, sans-serif;
@@ -55,14 +71,14 @@ set_style = """
 		}
 		table {
 			border-collapse: collapse;
-			width: 50%;
+			width: 100%;
 			margin-bottom: 20px;
 			background-color: #fff;
 			box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
 		}
 		th, td {
-			text-align: left;
+			text-align: center;
 			padding: 12px;
 			border-bottom: 1px solid #ddd;
 		}
@@ -85,7 +101,7 @@ class Table:
         self.virus_array = virus_2d_array
         self.header = header
     def table_head(self):
-        table_head = '<table align="center"> \n <thead> \n <tr>'
+        table_head = '<div class="tableFixHead"><table align="center"> \n <thead> \n <tr>'
         
         table_head += '\n'.join([f'<th>{c}</th>' for c in self.header])
         table_head + '</tr></thead>'
@@ -96,7 +112,7 @@ class Table:
         for line in self.virus_array:
             table_line = '<tr>' + ''.join([f'<td>{i}</td>' for i in line]) + '</tr>'
             body += table_line
-        body += '</tbody> \n </table>'
+        body += '</tbody> \n </table></div>'
         return body
     def make_table(self):
         return self.table_head() + self.table_body()
