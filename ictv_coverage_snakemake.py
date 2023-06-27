@@ -6,12 +6,12 @@ import random
 
 base = "DATA/test/"
 input_folder = "DATA/test/raw_fastq/"
-genome_reference = 'virus_reference.fa'
+genome_reference = 'ictv_virus_reference.fa'
 
 
 
-suffix_1 = "_1.fq"
-suffix_2 = "_2.fq"
+suffix_1 = "_1.fq.gz"
+suffix_2 = "_2.fq.gz"
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
@@ -163,7 +163,7 @@ rule count_snp:
     conda:
         "envs/freebayes.yaml"
     params:
-        reference = genome_reference
+        reference = genome_reference,
         threshold=10
     priority:
         29
@@ -180,6 +180,7 @@ rule convert_coverage:
     output: 
         main=base + 'ictv_coverage/' + '{file}' + '.csv',
         tmp=f'{base}tmp/cov_tmp/{{file}}.txt'
+    conda: 'envs/scripts.yaml'
     priority:
         32
     shell:

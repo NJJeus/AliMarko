@@ -1,8 +1,10 @@
 name: scripts
 channels:
   - defaults
-  - acaconda
 dependencies:
   - python=3.10
-  - pandas
+  - pip
   - numpy
+  - pip:
+    - pandas
+    - openpyxl
