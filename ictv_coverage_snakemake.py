@@ -4,8 +4,8 @@ import glob
 import random
 
 
-base = "DATA/test/"
-input_folder = "DATA/test/raw_fastq/"
+base = "DATA_test/"
+input_folder = "DATA_test/raw_fastq/"
 genome_reference = 'ictv_virus_reference.fa'
 
 
@@ -20,13 +20,23 @@ want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
 rule all:
     input: base + 'result_coverage_table.tsv',  want_all
 
-    
+
+rule index_reference:
+    input: genome_reference
+    output : genome_reference + '.amb'
+    conda:
+         "envs/bwa.yaml"
+    shell:
+        """
+        bwa index {input}
+        """
 
 rule map_raw_fastq:
     input: 
         read1 = input_folder+"{file}"+suffix_1,
         read2 = input_folder+"{file}"+suffix_2,
-        reference = genome_reference
+        reference = genome_reference,
+        referenec_index = genome_reference + '.amb'
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 20
     priority: 1
@@ -34,6 +44,11 @@ rule map_raw_fastq:
         "envs/bwa.yaml"
     shell:
         """
+        if [[ ! -f "{input.reference}.amb" ]]
+        then
+        bwa index {input.reference}
+        fi
+
         bwa mem  -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
         
         """
