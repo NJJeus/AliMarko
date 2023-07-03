@@ -4,21 +4,37 @@ import glob
 import random
 
 
-base = "DATA/test/"
-input_folder = "DATA/test/raw_fastq/"
-ictv_db_folder = 'DATA/bats/' + 'all_virus_reference/'
+base = "DATA_test/"
+input_folder = "DATA_test/raw_fastq/"
+genome_reference = 'ictv_virus_reference.fa'
 
-files, = glob_wildcards(input_folder+"{file}"+'.fastq.gz')
+suffix = '.fastq.gz'
 
-want_all = (expand(f'{base}drawings/{{file}}/', file=files))
+files, = glob_wildcards(input_folder+"{file}"+ suffix)
+
+want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
+
+print('Files:', end=' ')
+print(files)
 
 rule all:
     input: base + 'result_coverage_table.tsv',  want_all
+    
+rule index_reference:
+    input: genome_reference
+    output : genome_reference + '.amb'
+    conda:
+         "envs/bwa.yaml"
+    shell:
+        """
+        bwa index {input}
+        """
 
 rule map_raw_fastq:
     input: 
         read1 = input_folder + "{file}"+'.fastq.gz',
-        reference = ictv_db_folder +'all_genomes.fasta'
+        reference = genome_reference,
+        reference_index = genome_reference + '.amb'
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 10
     conda:
@@ -76,11 +92,25 @@ rule kraken2:
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
         gzip -c {{output.kraken2_report}}.tmp > {{output.kraken2_report}}; rm {{output.kraken2_report}}.tmp
         """
+        
+rule deduplicate_fastq:
+    input:
+        read1=base+'mapped_not_classified_fastq/'+"{file}"+'.fastq.gz'
+    output:
+        read1=base+'deduplicated_fastq/'+"{file}"+'.fastq.gz'
+    threads: 10
+    priority: 13
+    conda:
+        "envs/fastp.yaml"
+    shell:
+        """
+        fastp -w {threads} -i {input.read1}  -o {output.read1}
+        """
 
 rule map_extracted_fastq:
     input: 
-        read1=base+'mapped_not_classified_fastq/'+"{file}"+'.fastq.gz',
-        reference = ictv_db_folder + 'all_genomes.fasta'
+        read1=base+'deduplicated_fastq/'+"{file}"+'.fastq.gz',
+        reference = genome_reference
     output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
     priority:
@@ -90,6 +120,7 @@ rule map_extracted_fastq:
     shell:
         """
         bwa mem -t {threads} {input.reference} {input.read1} | samtools sort -@ {threads} -o {output} -
+        samtools index {output}
         """
         
 rule calculate_coverage_and_quality:
@@ -98,36 +129,48 @@ rule calculate_coverage_and_quality:
         coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
         quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
     priority:
-        6
+        24
     conda:
         "envs/bwa.yaml"
     shell:
         """
         samtools coverage {input} > {output.coverage}
         samtools view {input} | awk '{{print $3 "\t" $5}}' > {output.quality}
+        sed -i '/^\*/d' {output.quality}
         """
 
+rule count_snp:
+    input: 
+        coverage = base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
+        bam= base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
+    output:
+        base + '/snps/{file}.csv'
+    conda:
+        "envs/freebayes.yaml"
+    params:
+        reference = genome_reference,
+        threshold=10
+    priority:
+        29
+    shell:
+        """
+        bash scripts/calculate_variance.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output} -t={params.threshold}
+        """
+    
+        
 rule convert_coverage:
     input: 
         coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
-        quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
+        snps= base + '/snps/{file}.csv'
     output: 
-        base + 'ictv_coverage/' + '{file}' + '.csv'
+        main=base + 'ictv_coverage/' + '{file}' + '.csv',
+        tmp=f'{base}tmp/cov_tmp/{{file}}.txt'
+    conda: 'envs/scripts.yaml'
     priority:
-        1000
+        32
     shell:
         """
-        python scripts/convert_ictv.py -c {input.coverage} -q {input.quality} -o {output} -t ictv_tables
-        """
-rule generate_tmp_coverage_files:
-    input: 
-        coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt'
-    output: f'{base}tmp/cov_tmp/{{file}}.txt'
-    priority:
-        1001
-    shell:
-        """
-        python scripts/draw_coverage.py -c {input.coverage} -t ictv_tables -o {output}
+        python scripts/convert_ictv.py -c {input.coverage} -o {output.main} -t ictv_tables -s {input.snps} -m {output.tmp}
         """
         
 rule plot_coverage:
@@ -135,11 +178,27 @@ rule plot_coverage:
         bam=base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam',
         coverage=f'{base}tmp/cov_tmp/{{file}}.txt'
     output: directory(f'{base}drawings/{{file}}/')
+    priority:
+        37
     params:
-        reference=ictv_db_folder + 'all_genomes.fasta'
+        reference=genome_reference
+    conda:
+        'envs/bamsnap.yaml'
     shell:
         """
         bash scripts/plot_coverage.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output}
+        """
+        
+rule make_html:
+    input:
+        coverage=base + 'ictv_coverage/' + '{file}' + '.csv',
+        drawings=base+'drawings/'+ '{file}'
+    output: f'{base}/htmls/{{file}}.html'
+    priority:
+        39
+    shell:
+        """
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output}
         """
 
 

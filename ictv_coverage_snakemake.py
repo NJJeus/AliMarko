@@ -21,6 +21,7 @@ rule all:
     input: base + 'result_coverage_table.tsv',  want_all
 
 
+
 rule index_reference:
     input: genome_reference
     output : genome_reference + '.amb'
@@ -36,7 +37,8 @@ rule map_raw_fastq:
         read1 = input_folder+"{file}"+suffix_1,
         read2 = input_folder+"{file}"+suffix_2,
         reference = genome_reference,
-        referenec_index = genome_reference + '.amb'
+        reference_index = genome_reference + '.amb'
+        
     output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
     threads: 20
     priority: 1
@@ -210,10 +212,11 @@ rule plot_coverage:
     output: directory(f'{base}drawings/{{file}}/')
     priority:
         37
+    conda:
+        'envs/bamsnap.yaml'
     params:
         reference=genome_reference
-    conda:
-        "envs/bamsnap.yaml"
+    
     shell:
         """
         bash scripts/plot_coverage.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output}
