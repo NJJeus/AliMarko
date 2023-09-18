@@ -82,7 +82,7 @@ for host, row in ictv_drawings.iterrows():
     host_dict.update({f'<h2>{host}</h2>':styles.Details(viruses).make_details()})
 
 
-order = [f'<h2>{host}</h2>' for host in ['vertebrates', 'invertebrates', 'fungi', 'plants', 'algae', 'protists', 'bacteria', 'archaea']]
+order = [f'<h2>{host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates', 'invertebrates, vertebrates', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
 def key_func(x):
     return order.index(x)
 host_dict = sorted(host_dict.items(), key=lambda x: key_func(x[0]))

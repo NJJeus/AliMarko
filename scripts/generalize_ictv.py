@@ -23,7 +23,11 @@ out = args.output
 common_file = pd.read_csv(files[0], converters={'fragments_coverage': pd.eval}).sort_values(by='Species')
 max_coverage = np.array(common_file.coverage)
 min_coverage = np.array(common_file.coverage)
+l = len(files)
+c=0
 for i in files[1:]:
+    c+=1
+    print(f'{c}/{l}')
     file = pd.read_csv(i, converters={'fragments_coverage': pd.eval}).sort_values(by='Species')
     common_file.coverage = np.array(common_file.coverage) + np.array(file.coverage)
     common_file.fragments_coverage = per_fragments_sum_coverage(common_file.fragments_coverage.values.tolist(),
