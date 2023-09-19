@@ -7,6 +7,7 @@ import random
 base = "DATA_test/"
 input_folder = "DATA_test/raw_fastq/"
 genome_reference = 'ictv_virus_reference.fa'
+HMM_folder = '../DATA/profiles/MINION/Wide/'
 
 
 
@@ -73,7 +74,7 @@ rule pair_unclassified_fastq:
         seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/not_classified_paired_fastq/
         
         """
- 
+'''
     
 rule deduplicate_fastq:
     input:
@@ -90,11 +91,11 @@ rule deduplicate_fastq:
         """
         fastp -w {threads} -i {input.read1} -I {input.read2} -o {output.read1} -O {output.read2}
         """
-'''   
+
 rule map_extracted_fastq:
     input: 
-        read1=base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
-            read2=base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz',
+        read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz',
         reference = genome_reference
     output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
@@ -123,6 +124,8 @@ rule calculate_coverage_and_quality:
         sed -i '/^\*/d' {output.quality}
         """
 
+
+        
 rule count_snp:
     input: 
         coverage = base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
@@ -174,10 +177,33 @@ rule plot_coverage:
         bash scripts/plot_coverage.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output}
         """
         
+
+rule hmm_scan:
+    input: 
+        read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz'
+    params:
+        reference = HMM_folder,
+    threads: 10
+    conda: 'envs/hmm_scan.yaml'
+    output:
+        read1=f'{base}/hmm_reports/{{file}}_1.csv',
+        read2=f'{base}/hmm_reports/{{file}}_2.csv'
+    shell:
+        f"""
+        python scripts/analyze_seq_hmm.py -f {{input.read1}} -o {{output.read1}} -m {{params.reference}} -t {{threads}}  --batch 10000
+        python scripts/analyze_seq_hmm.py -f {{input.read2}} -o {{output.read2}} -m {{params.reference}} -t {{threads}}  --batch 10000
+        """
+         
+        
+        
+        
 rule make_html:
     input:
         coverage=base + 'ictv_coverage/' + '{file}' + '.csv',
-        drawings=base+'drawings/'+ '{file}'
+        drawings=base+'drawings/'+ '{file}',
+        read1=f'{base}/hmm_reports/{{file}}_1.csv',
+        read2=f'{base}/hmm_reports/{{file}}_2.csv'
     output: f'{base}/htmls/{{file}}.html'
     priority:
         39
