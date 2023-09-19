@@ -21,7 +21,6 @@ rule all:
     input: base + 'result_coverage_table.tsv',  want_all
 
 
-
 rule index_reference:
     input: genome_reference
     output : genome_reference + '.amb'
@@ -49,81 +48,37 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        kraken2 --threads {{threads}} --confidence 0.0 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
+        kraken2 --threads {{threads}} --confidence 0.0 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
         gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
         """
 
 
-rule map_raw_fastq:
-    input: 
-        read1 = input_folder+"{file}"+suffix_1,
-        read2 = input_folder+"{file}"+suffix_2,
-        reference = genome_reference,
-        reference_index = genome_reference + '.amb'
-        
-    output: temp(base+'bam_sorted/'+'{file}'+'.sorted.bam')
-    threads: 20
-    priority: 1
-    conda:
-        "envs/bwa.yaml"
-        
-    shell:
-        """
-        if [[ ! -f "{input.reference}.amb" ]]
-        then
-        bwa index {input.reference}
-        fi
 
-        bwa mem  -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
-        
-        """
-    
-    
-rule kraken2:
-    input: read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
-           read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
-    output: kraken2_report = base+"kraken_results/{file}.report",
-            kraken2_out = base+"kraken_results/{file}.out",
-            read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq.gz',
-            read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz'
-    params: 
-            kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
-            sample = lambda wildcards: wildcards.file
-    priority: 4
-    conda:
-        "envs/kraken2.yaml"
-    threads: 10
-    shell: 
-        f"""
-        kraken2 --threads {{threads}} --confidence 0.0 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
-        gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
-        gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
-        """
-
+'''
 
 rule pair_unclassified_fastq:
     input:
-        read1=base+'mapped_not_classified_fastq/'+"{file}"+'_1.fastq.gz',
-        read2=base+'mapped_not_classified_fastq/'+"{file}"+'_2.fastq.gz'
+        read1=base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     output:
-        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
-        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
+        read1=base+'not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
     priority: 13
     conda:
         "envs/seqkit.yaml"
     shell:
         f"""
-        seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/mapped_not_classified_paired_fastq/
+        seqkit pair --force -j {{threads}} -1 {{input.read1}} -2 {{input.read2}}  -O {base}/not_classified_paired_fastq/
         
         """
-    
+ 
     
 rule deduplicate_fastq:
     input:
-        read1=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_1.fastq.gz',
-        read2=base+'mapped_not_classified_paired_fastq/'+"{file}"+'_2.fastq.gz'
+        read1=base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
+        read2=base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     output:
         read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz'
@@ -135,11 +90,11 @@ rule deduplicate_fastq:
         """
         fastp -w {threads} -i {input.read1} -I {input.read2} -o {output.read1} -O {output.read2}
         """
-
+'''   
 rule map_extracted_fastq:
     input: 
-        read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
-        read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz',
+        read1=base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
+            read2=base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz',
         reference = genome_reference
     output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
