@@ -32,6 +32,29 @@ rule index_reference:
         bwa index {input}
         """
 
+        
+rule kraken2:
+    input: read1 = input_folder+"{file}"+suffix_1,
+            read2 = input_folder+"{file}"+suffix_2
+    output: kraken2_report = base+"kraken_results/{file}.report",
+            kraken2_out = base+"kraken_results/{file}.out",
+            read1=base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
+            read2=base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz'
+    params: 
+            kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
+            sample = lambda wildcards: wildcards.file
+    priority: 4
+    conda:
+        "envs/kraken2.yaml"
+    threads: 10
+    shell: 
+        f"""
+        kraken2 --threads {{threads}} --confidence 0.0 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/mapped_not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
+        gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
+        gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
+        """
+
+
 rule map_raw_fastq:
     input: 
         read1 = input_folder+"{file}"+suffix_1,
@@ -53,33 +76,6 @@ rule map_raw_fastq:
 
         bwa mem  -t {threads} {input.reference} {input.read1} {input.read2} | samtools sort -@ {threads} -o {output} -
         
-        """
-    
-    
-rule extract_mapped_bam_sorted:  
-    input: base+'bam_sorted/'+'{file}'+'.sorted.bam'
-    output: temp(base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam')
-    threads: 20
-    priority: 4
-    conda:
-        "envs/bwa.yaml"
-    shell:
-        """
-        samtools view -b -F 4 -f 1 {input} --threads {threads} > {output}
-        """
-
-rule extract_mapped_fastq:
-    input: base+'mapped_bam_sorted/'+'{file}'+'_mapped.sorted.bam'
-    output: 
-        read1=base+'mapped_fastq/'+"{file}"+'_1.fastq.gz',
-        read2=base+'mapped_fastq/'+"{file}"+'_2.fastq.gz'
-    threads: 20
-    priority: 7
-    conda:
-        "envs/bwa.yaml"
-    shell:
-        """
-        samtools fastq {input} -1 {output.read1} -2 {output.read2} --threads {threads} -c 8;
         """
     
     
