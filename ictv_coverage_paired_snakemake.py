@@ -67,6 +67,7 @@ rule map_raw_fastq:
     priority: 1
     conda:
         "envs/bwa.yaml"
+        
     shell:
         """
         if [[ ! -f "{input.reference}.amb" ]]
