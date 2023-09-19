@@ -58,6 +58,8 @@ ictv_drawings[['fragments_len', 'fragments_meandepth', 'fragments_coverage', 'fr
 ictv_drawings = ictv_drawings.groupby(level=0).agg({i:lambda x: list(x) for i in ictv_drawings.columns})
 
 host_dict = {}
+
+
 for host, row in ictv_drawings.iterrows():
     viruses = {}
     for virus_loc in range(len(row.Isolate_id)):
