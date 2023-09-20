@@ -207,7 +207,7 @@ rule hmm_report:
         reference = HMM_info,
     conda: 'envs/hmm_scan.yaml'
     output:
-        read1=f'{base}/hmm_reports/{{file}}.csv'
+        f'{base}/hmm_reports/{{file}}.csv'
     shell:
         f"""
         python scripts/generate_hmm_report.py -i {{input.read1}} -i2 {{input.read2}} -o {{output}} -m {{params.reference}}
