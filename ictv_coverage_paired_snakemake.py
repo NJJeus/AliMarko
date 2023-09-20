@@ -8,6 +8,7 @@ base = "DATA_test/"
 input_folder = "DATA_test/raw_fastq/"
 genome_reference = 'ictv_virus_reference.fa'
 HMM_folder = '../DATA/profiles/MINION/Wide/'
+HMM_info = 'ictv_tables/hmm_info.csv'
 
 
 
@@ -187,32 +188,48 @@ rule hmm_scan:
     threads: 10
     conda: 'envs/hmm_scan.yaml'
     output:
-        read1=f'{base}/hmm_reports/{{file}}_1.csv',
-        read2=f'{base}/hmm_reports/{{file}}_2.csv'
+        read1=f'{base}/hmm_results/{{file}}_1.csv',
+        read2=f'{base}/hmm_results/{{file}}_2.csv'
     shell:
         f"""
         python scripts/analyze_seq_hmm.py -f {{input.read1}} -o {{output.read1}} -m {{params.reference}} -t {{threads}}  --batch 10000
         python scripts/analyze_seq_hmm.py -f {{input.read2}} -o {{output.read2}} -m {{params.reference}} -t {{threads}}  --batch 10000
         """
          
+    
         
         
+rule hmm_report:
+    input: 
+        read1=f'{base}/hmm_results/{{file}}_1.csv',
+        read2=f'{base}/hmm_results/{{file}}_2.csv'
+    params:
+        reference = HMM_info,
+    conda: 'envs/hmm_scan.yaml'
+    output:
+        read1=f'{base}/hmm_reports/{{file}}.csv'
+    shell:
+        f"""
+        python scripts/generate_hmm_report.py -i {{input.read1}} -i2 {{input.read2}} -o {{output}} -m {{params.reference}}
         
+        """       
+
+
+
 rule make_html:
     input:
         coverage=base + 'ictv_coverage/' + '{file}' + '.csv',
         drawings=base+'drawings/'+ '{file}',
-        read1=f'{base}/hmm_reports/{{file}}_1.csv',
-        read2=f'{base}/hmm_reports/{{file}}_2.csv'
+        hmm=f'{base}/hmm_reports/{{file}}.csv'
     output: f'{base}/htmls/{{file}}.html'
     priority:
         39
     shell:
         """
-        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output}
-        """
-
-
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm}
+        """           
+    
+        
 rule generalize_coverage:
     input: 
         expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files)

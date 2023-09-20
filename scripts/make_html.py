@@ -21,6 +21,8 @@ parser = argparse.ArgumentParser(description=description)
 parser.add_argument('-c', '--coverage', type=str, help='A file fith ictv coverage')
 parser.add_argument('-o', '--output', type=str, help='An output file')
 parser.add_argument('-d', '--drawings', type=str, help='A folder with drawings')
+parser.add_argument('-m', '--hmm_report', type=str, help='A hmm report file')
+
 args = parser.parse_args()
 
 
@@ -39,23 +41,48 @@ if args.drawings:
     drawings_folder_path = args.drawings
 else:
     if_condition(False, 'Missed -t argument')
+    
+if args.hmm_report:
+    if_condition(os.path.isfile(args.hmm_report), "A hmm report file does not exists")
+    hmm_report = args.hmm_report
+else:
+    if_condition(False, 'Missed -m argument')   
 
 sample_name = os.path.splitext(os.path.basename(ictv_coverage_file))[0]
 ictv_coverage = pd.read_csv(ictv_coverage_file)
+
+
+
+
+
+
 
 introduction_frame = ictv_coverage[['Virus name(s)', 'Host source',
                'coverage', 'meandepth', 'Genus', 'Family', 'Realm']][:50]
 introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
 introduction_table = introduction_frame.to_numpy()
 
+hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Score', 'Best_domain_score', 'Threshold']]
+hmm_frame[['Score', 'Best_domain_score', 'Threshold']] = hmm_frame[['Score', 'Best_domain_score', 'Threshold']].round(3)
+hmm_header = hmm_frame.columns
+hmm_table = hmm_frame.to_numpy()
+
+
+
+
 ictv_drawings = ictv_coverage.query('coverage > 0.1').set_index('Host source')
 
 ictv_drawings['genbank_list'] = ictv_drawings['Virus GENBANK accession'].apply(lambda i :
                                                                        [el.split(":")[-1] for el in i.replace(' ', '').split(';')])
+
+
 ictv_drawings[['fragments_len', 'fragments_meandepth', 'fragments_coverage', 'fragments_nucleotide_similarity', 'fragments_meanmapq', 'fragments_snps']] = ictv_drawings[['fragments_len',
        'fragments_meandepth', 'fragments_coverage', 'fragments_nucleotide_similarity', 'fragments_meanmapq', 'fragments_snps']].applymap(lambda x: x.strip('][').split(', '))
 
 ictv_drawings = ictv_drawings.groupby(level=0).agg({i:lambda x: list(x) for i in ictv_drawings.columns})
+
+
+
 
 host_dict = {}
 
@@ -101,9 +128,13 @@ greatings = f"""
 
 table_html =  styles.Table(introduction_table, introduction_header).make_table()
 
+hmm_greetings = f"<p>\n</p><h2> <center> HMM results </h2><p>\n</p>"
+
+table_hmm = styles.Table(hmm_table, hmm_header).make_table()
+
 details = styles.Details(host_dict).make_details()
 
-out = style.replace('Sample Name', sample_name) + greatings + table_html + details
+out = style.replace('Sample Name', sample_name) + greatings + table_html + hmm_greetings +  table_hmm + details
 
 with open(output, 'w') as f:
     f.write(out)
