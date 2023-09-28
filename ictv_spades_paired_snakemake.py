@@ -11,7 +11,6 @@ HMM_folder = '../DATA/profiles/MINION/Wide/'
 HMM_info = 'ictv_tables/hmm_info.csv'
 
 
-
 suffix_1 = "_1.fq.gz"
 suffix_2 = "_2.fq.gz"
 
@@ -65,7 +64,8 @@ rule spades:
         f"{base}/spades/{{file}}/contigs.fasta"
     conda:
         'envs/spades.yaml'
-    threads: 10
+    threads: 20
+    priority: 1
     params:
         sample = lambda wildcards: wildcards.file
     shell:
@@ -82,7 +82,7 @@ rule deduplicate_fastq:
         read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
-    priority: 13
+    priority: 8
     conda:
         "envs/fastp.yaml"
     shell:
@@ -97,7 +97,7 @@ rule map_extracted_fastq:
         reference = genome_reference
     output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
-    priority: 20
+    priority: 10
     conda:
         "envs/bwa.yaml"
     shell:
@@ -111,8 +111,7 @@ rule calculate_coverage_and_quality:
     output: 
         coverage=base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
         quality=base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
-    priority:
-        24
+    priority:12
     conda:
         "envs/bwa.yaml"
     shell:
@@ -136,7 +135,7 @@ rule count_snp:
         reference = genome_reference,
         threshold=10
     priority:
-        29
+        14
     shell:
         """
         bash scripts/calculate_variance.sh -f={params.reference} -b={input.bam} -l={input.coverage} -o={output} -t={params.threshold}
@@ -152,7 +151,7 @@ rule convert_coverage:
         tmp=f'{base}tmp/cov_tmp/{{file}}.txt'
     conda: 'envs/scripts.yaml'
     priority:
-        32
+        16
     shell:
         """
         python scripts/convert_ictv.py -c {input.coverage} -o {output.main} -t ictv_tables -s {input.snps} -m {output.tmp}

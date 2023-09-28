@@ -77,7 +77,7 @@ for index, item in ictv_data.iterrows():
 taxo_index = pd.DataFrame({'ictv_taxo_index':indeces}, index=accessions)
 
 data = pd.merge(left=data, right=snps, left_on='rname', right_on='rname', how='left')
-data['nucleotide_similarity'] = 1 - data['snps'] / data['deep_sites']
+data['nucleotide_similarity'] = 1 - data['snps'] / (data['deep_sites'] + 1)
 
 # rname contains database name, accession number and version. We need only an accession number
 data['tmp_rname'] = data['rname'].copy()

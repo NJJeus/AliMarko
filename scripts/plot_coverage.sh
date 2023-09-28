@@ -31,7 +31,7 @@ do
 	rname=$(echo $line | cut -f 2 -d ',');
 	endpos=$(echo $line | cut -f 3 -d ',');
     echo $BAMFILE  $species $rname $endpos;
-	bamsnap \
+	timeout 20 bamsnap \
 		-draw coordinates bamplot coverage base \
 		-bam $BAMFILE \
 		-out "${DIR}/${species}/${rname}.png"\

@@ -64,8 +64,8 @@ if args.input2:
     report = pd.concat([report, report2])
 
     
-report = report.query('Score_ratio > 1.5').drop('Name', axis=1)
-report = report.groupby(['Query', 'Taxon']).mean().reset_index().sort_values('Score_ratio', ascending=False).drop_duplicates('Taxon')
+report = report.query('Score_ratio > 1.5')#.drop('Name', axis=1)
+#report = report.groupby(['Query', 'Taxon']).mean().reset_index().sort_values('Score_ratio', ascending=False)
 
 report.reset_index(drop=True).to_csv(output)
 
