@@ -94,7 +94,8 @@ rule map_extracted_fastq:
     input: 
         read1=base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
         read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz',
-        reference = genome_reference
+        reference = genome_reference,
+        index_ref = genome_reference + '.amb'
     output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
     threads: 10
     priority: 10
