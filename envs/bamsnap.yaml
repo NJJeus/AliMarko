@@ -7,6 +7,7 @@ dependencies:
     - libgcc-ng
     - htslib=1.17
     - samtools=1.17
+    - pip
     - pip:
         - pyproject-toml
         - pysam==0.21
