@@ -1,8 +1,15 @@
 name: bamsnap
 channels:
-  - defaults
+    - conda-forge
+    - bioconda
+    - defaults
 dependencies:
-  - pip:
-      - git+https://github.com/NJJeus/bamsnap.git
+    - libgcc-ng
+    - htslib=1.17
+    - samtools=1.17
+    - pip:
+        - pyproject-toml
+        - pysam==0.21
+        - git+https://github.com/NJJeus/bamsnap.git
   
   
