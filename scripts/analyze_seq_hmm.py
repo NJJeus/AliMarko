@@ -118,12 +118,15 @@ def translate(seqs, nnn_table, threshold=90, to_stop=True):
         translate_func = _translate_non_stop
     
     for seq in seqs:
-        proteins += translate_func(seq, nnn_table, threshold=threshold)
+        proteins.append(translate_func(seq, nnn_table, threshold=threshold))
     
-    return proteins
+    return np.concatenate(proteins)
 
-def _translate_to_stop(seq, nnn_table, threshold):
+def _translate_to_stop(seq_array, nnn_table, threshold):
+    
+    
     proteins= []
+    seq, seq_range= seq_array
     count = 0
     seq_len = len(seq)
     skews = {0:seq_len, 1:seq_len, 2:seq_len}
@@ -148,12 +151,14 @@ def _translate_to_stop(seq, nnn_table, threshold):
             aa = nnn_table.get(seq_trunc[i:i + 3], 'X')
             protein.append(aa)
         else:
-            proteins.append("".join(protein))
+            proteins.append(["".join(protein)])
     return proteins
 
-def _translate_non_stop(seq, nnn_table, threshold):
+def _translate_non_stop(seq_array, nnn_table, threshold):
     proteins= []
     count = 0
+    
+    seq, seq_info = seq_array
     
     skews_a = [0, 1, 2]
 
@@ -169,13 +174,13 @@ def _translate_non_stop(seq, nnn_table, threshold):
             aa = nnn_table.get(seq_trunc[i:i + 3], 'X')
             protein.append(aa)
         else:
-            proteins.append("".join(protein))
-    return proteins    
+            proteins.append(["".join(protein), seq_info+f'{skew}'])
+    return np.array(proteins)    
 
-def separate_string(string, max_length):
+def separate_string(string, max_length, info):
     parts = []
     for i in range(0, len(string), max_length):
-        parts.append(string[i:i+max_length])
+        parts.append([string[i:i+max_length], f'{info}.{i}_'])
     return parts
 
 def analyse_seqs(hmms, seqs, scores_global):
@@ -184,12 +189,13 @@ def analyse_seqs(hmms, seqs, scores_global):
     
     hits = pyhmmer.hmmer.hmmsearch(hmms, seqs, cpus=threads)
     for hit in hits:
-        scores = np.array([(hit.query_name, i.name, i.score, i.best_domain.score) for i in hit])
+        for hit2 in hit:
+            scores = np.array([(hit.query_name, hit2.name, i.score, i.alignment.target_from, i.alignment.target_to) for i in hit2.domains])
 
-        try:
-            scores_global = np.concatenate([scores_global, scores])
-        except ValueError:
-            pass
+    try:
+        scores_global = np.concatenate([scores_global, scores])
+    except ValueError:
+        pass
     return scores_global
 
 def analyse_file(seq_file, hmms, threshold=90, batch=100000, type_of_file='fastq', to_stop=False):
@@ -214,15 +220,16 @@ def analyse_file(seq_file, hmms, threshold=90, batch=100000, type_of_file='fastq
     fastq_seq = SeqIO.parse(seq_file, type_of_file)
     i=0
     c=0
-    scores_global = np.empty([0, 4])
+    scores_global = np.empty([0, 5])
     seqs = []
     for dna_record in fastq_seq:
         i+=1
-        dna_seqs = [*separate_string(str(dna_record.seq), 290000), *separate_string(str(dna_record.seq.reverse_complement()), 290000)]
+        dna_seqs = np.concatenate([separate_string(str(dna_record.seq), 290000, f'{dna_record.name}_dir'), separate_string(str(dna_record.seq.reverse_complement()), 290000, f'{dna_record.name}_rev')])
+        
 
         # generate all translation frames
         aa_seqs = translate(dna_seqs, nnn_table, threshold=threshold, to_stop=to_stop)
-        aa_seqs = [pyhmmer.easel.TextSequence(sequence=str(i), name=bytes(dna_record.name, 'utf-8')).digitize(hmm.alphabet) for i in aa_seqs]
+        aa_seqs = [pyhmmer.easel.TextSequence(sequence=str(i[0]), name=bytes(i[1], 'utf-8')).digitize(hmm.alphabet) for i in aa_seqs]
 
         seqs += aa_seqs
         c+=len(aa_seqs)
@@ -235,10 +242,10 @@ def analyse_file(seq_file, hmms, threshold=90, batch=100000, type_of_file='fastq
     scores_global = analyse_seqs(hmms, seqs, scores_global)
     del seqs
     
-    result_frame = pd.DataFrame(np.array(scores_global), columns=['Query', 'Name', 'Score', 'Best_domain_score'])
+    result_frame = pd.DataFrame(np.array(scores_global), columns=['Query', 'Name', 'Score', 'From', 'To'])
     result_frame.Score = result_frame.Score.astype('float')
-    result_frame.Best_domain_score = result_frame.Best_domain_score.astype('float')
     result_frame.Name = result_frame.Name.astype('str')
+    result_frame[['From', 'To']] = result_frame[['From', 'To']].astype('int') * 3
     result_frame.Query = result_frame.Query.astype('str')
     return result_frame
 
