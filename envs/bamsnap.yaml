@@ -4,13 +4,14 @@ channels:
     - bioconda
     - defaults
 dependencies:
+    - python>=3.1.0
     - libgcc-ng
     - htslib=1.17
     - samtools=1.17
+    - cython>=3.0.0
     - pip
+    - pysam
     - pip:
         - pyproject-toml
-        - pysam==0.21
-        - git+https://github.com/NJJeus/bamsnap.git
-  
-  
+        - git+https://github.com/parklab/bamsnap.git
+        

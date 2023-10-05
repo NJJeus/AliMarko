@@ -7,7 +7,7 @@ import random
 base = "DATA_test/"
 input_folder = "DATA_test/raw_fastq/"
 genome_reference = 'ictv_virus_reference.fa'
-HMM_folder = '../DATA/profiles/MINION/Wide/'
+HMM_folder = '/mnt/disk1/PROJECTS/SURPRISE/VIRALTOOL/DATA/profiles/MINION/wide_pro_eu/'
 HMM_info = 'ictv_tables/hmm_info.csv'
 
 
