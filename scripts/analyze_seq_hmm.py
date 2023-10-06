@@ -174,13 +174,13 @@ def _translate_non_stop(seq_array, nnn_table, threshold):
             aa = nnn_table.get(seq_trunc[i:i + 3], 'X')
             protein.append(aa)
         else:
-            proteins.append(["".join(protein), seq_info+f'{skew}'])
+            proteins.append(["".join(protein), seq_info+f'_skew_{skew}_'])
     return np.array(proteins)    
 
 def separate_string(string, max_length, info):
     parts = []
     for i in range(0, len(string), max_length):
-        parts.append([string[i:i+max_length], f'{info}.{i}_'])
+        parts.append([string[i:i+max_length], f'{info}.{i}'])
     return parts
 
 def analyse_seqs(hmms, seqs, scores_global):
@@ -190,12 +190,12 @@ def analyse_seqs(hmms, seqs, scores_global):
     hits = pyhmmer.hmmer.hmmsearch(hmms, seqs, cpus=threads)
     for hit in hits:
         for hit2 in hit:
-            scores = np.array([(hit.query_name, hit2.name, i.score, i.alignment.target_from, i.alignment.target_to) for i in hit2.domains])
+            try:
+                scores = np.array([(hit.query_name, hit2.name, i.score, i.alignment.target_from, i.alignment.target_to) for i in hit2.domains])
+                scores_global = np.concatenate([scores_global, scores])
 
-    try:
-        scores_global = np.concatenate([scores_global, scores])
-    except ValueError:
-        pass
+            except ValueError:
+                pass
     return scores_global
 
 def analyse_file(seq_file, hmms, threshold=90, batch=100000, type_of_file='fastq', to_stop=False):
@@ -245,7 +245,7 @@ def analyse_file(seq_file, hmms, threshold=90, batch=100000, type_of_file='fastq
     result_frame = pd.DataFrame(np.array(scores_global), columns=['Query', 'Name', 'Score', 'From', 'To'])
     result_frame.Score = result_frame.Score.astype('float')
     result_frame.Name = result_frame.Name.astype('str')
-    result_frame[['From', 'To']] = result_frame[['From', 'To']].astype('int') * 3
+    result_frame[['From', 'To']] = result_frame[['From', 'To']].astype('int')
     result_frame.Query = result_frame.Query.astype('str')
     return result_frame
 
