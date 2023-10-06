@@ -51,7 +51,7 @@ else:
 
 def create_report(input_file, hmm_info):
     report = input_file.merge(hmm_info, left_on='Query', right_on='Model_ID', how='left').drop('Model_ID', axis=1)
-    report['Score_ratio'] = report.Best_domain_score/report.Threshold
+    report['Score_ratio'] = report.Score/report.Threshold
     report = report.sort_values('Score_ratio', ascending=False)
     
     return report

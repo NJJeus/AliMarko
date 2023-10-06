@@ -62,8 +62,9 @@ introduction_frame = ictv_coverage[['Virus name(s)', 'Host source',
 introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
 introduction_table = introduction_frame.to_numpy()
 
-hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Score', 'Best_domain_score', 'Threshold']]
-hmm_frame[['Score', 'Best_domain_score', 'Threshold']] = hmm_frame[['Score', 'Best_domain_score', 'Threshold']].round(3)
+
+hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Score', 'Threshold', 'From', 'To']]
+hmm_frame[['Score', 'Threshold']] = hmm_frame[['Score', 'Threshold']].round(3)
 hmm_header = hmm_frame.columns
 hmm_table = hmm_frame.to_numpy()
 
