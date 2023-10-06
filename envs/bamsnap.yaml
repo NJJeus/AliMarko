@@ -12,6 +12,7 @@ dependencies:
     - pip
     - pysam
     - pip:
+        - Pillow==9.5.0
         - pyproject-toml
-        - git+https://github.com/parklab/bamsnap.git
+        - git+https://github.com/NJJeus/bamsnap.git
         
