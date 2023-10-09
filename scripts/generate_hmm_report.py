@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import os
+from re import search
 
 
 description = """Script make reports file from a result file of script 'analyze_seq.py'"""
@@ -46,13 +47,38 @@ if args.hmm_info:
 else:
     if_condition(False, 'Missed -h argument')
 
+    
+def export_seq_data(seq):
+    name, chain, part, length, length_contig, skew, sdf = seq.split(';')
+    chain, part, length, skew, length_contig = chain.replace('chain_', ''), part.replace('part_', ''), length.replace('len_', ''), skew.replace('skew_', ''), length_contig.replace('len_contig_', '')
+    frame = int(chain.replace('+1', '3').replace('-1', '4')) + int(skew)
+    return [name, part, length, frame, length_contig]
 
+
+def get_coordinate(dataframe):
+    result = []
+    for i, row in dataframe.iterrows():
+        if row['Frame'] <= 3:
+            from_ = row['From'] * 3 + row['Part']
+            to_ = row['To'] * 3 + row['Part']
+            result.append([from_, to_])
+        elif row['Frame'] >= 4:
+            from_ = (row['Lengh'] - row['From'] * 3)  + row['Part']
+            to_ = (row['Lengh'] - row['To'] * 3)  + row['Part']
+            result.append([from_, to_])
+    return np.array(result)
+                    
 
 
 def create_report(input_file, hmm_info):
     report = input_file.merge(hmm_info, left_on='Query', right_on='Model_ID', how='left').drop('Model_ID', axis=1)
     report['Score_ratio'] = report.Score/report.Threshold
     report = report.sort_values('Score_ratio', ascending=False)
+    report[['Name', 'Part', 'Lengh', 'Frame', 'Length_contig']] = np.array(report.Name.apply(lambda  x: export_seq_data(x)).to_list())
+    report[['Lengh', 'From', 'To', 'Part', 'Frame', 'Length_contig']] = report[['Lengh', 'From', 'To', 'Part', 'Frame', 'Length_contig']].astype('int')
+    report[['From', 'To']] = get_coordinate(report)
+
+    report = report.drop('Part', axis=1)
     
     return report
 
@@ -62,10 +88,11 @@ report = create_report(input_file, hmm_info)
 if args.input2:
     report2 = create_report(input_file2, hmm_info)
     report = pd.concat([report, report2])
+    
+
 
     
-report = report.query('Score_ratio > 1.5')#.drop('Name', axis=1)
-#report = report.groupby(['Query', 'Taxon']).mean().reset_index().sort_values('Score_ratio', ascending=False)
+report = report.query('Score_ratio > 1.5')
 
 report.reset_index(drop=True).to_csv(output)
 

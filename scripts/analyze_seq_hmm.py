@@ -174,13 +174,15 @@ def _translate_non_stop(seq_array, nnn_table, threshold):
             aa = nnn_table.get(seq_trunc[i:i + 3], 'X')
             protein.append(aa)
         else:
-            proteins.append(["".join(protein), seq_info+f'_skew_{skew}_'])
+            proteins.append(["".join(protein), seq_info+f';skew_{skew};'])
     return np.array(proteins)    
 
 def separate_string(string, max_length, info):
     parts = []
-    for i in range(0, len(string), max_length):
-        parts.append([string[i:i+max_length], f'{info}.{i}'])
+    len_string = len(string)
+    for i in range(0, len_string, max_length):
+        substring = string[i:i+max_length]
+        parts.append([substring, f'{info};part_{i};len_{len(substring)};len_contig_{len_string}'])
     return parts
 
 def analyse_seqs(hmms, seqs, scores_global):
@@ -224,7 +226,7 @@ def analyse_file(seq_file, hmms, threshold=90, batch=100000, type_of_file='fastq
     seqs = []
     for dna_record in fastq_seq:
         i+=1
-        dna_seqs = np.concatenate([separate_string(str(dna_record.seq), 290000, f'{dna_record.name}_dir'), separate_string(str(dna_record.seq.reverse_complement()), 290000, f'{dna_record.name}_rev')])
+        dna_seqs = np.concatenate([separate_string(str(dna_record.seq), 300000, f'{dna_record.name};chain_+1'), separate_string(str(dna_record.seq.reverse_complement()), 300000, f'{dna_record.name};chain_-1')])
         
 
         # generate all translation frames
