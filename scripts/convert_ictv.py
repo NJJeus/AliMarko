@@ -117,7 +117,7 @@ data['coverage'] = (data.weighted_coverage / data.len).round(2)
 data['meanmapq'] = (data.weighted_quality / data.len * 100).round(2)
 data['meandepth'] = (data.weighted_meandepth / data.len).round(2)
 data = data.sort_values(by='coverage', ascending=False)
-data['nucleotide_similarity'] = 1 - data['snps'] / data['deep_sites']
+data['nucleotide_similarity'] = 1 - data['snps'].div(data['deep_sites'].replace(0, np.inf))
 data['deep_sites'] = data['deep_sites'].astype('int')
 
 indeces = []
