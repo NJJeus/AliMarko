@@ -25,6 +25,8 @@ done
 
 BAMNAME=$(echo $(basename $BAMFILE) |  cut -d '.' -f 1)
 
+mkdir -p $DIR
+
 cat $LISTFILE | while read line; 
 do
 	species=$(echo $line | cut -f 1 -d ',');
