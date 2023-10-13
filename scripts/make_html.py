@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser(description=description)
 parser.add_argument('-c', '--coverage', type=str, help='A file fith ictv coverage')
 parser.add_argument('-o', '--output', type=str, help='An output file')
 parser.add_argument('-d', '--drawings', type=str, help='A folder with drawings')
+parser.add_argument('-a', '--hmm_drawings', type=str, help='A folder with hmm drawings')
 parser.add_argument('-m', '--hmm_report', type=str, help='A hmm report file')
 
 args = parser.parse_args()
@@ -38,9 +39,15 @@ else:
     if_condition(False, 'Missed -o argument')
 if args.drawings:
     if_condition(os.path.isdir(args.drawings), "drawings folder doesn't exist")
-    drawings_folder_path = args.drawings
+    coverage_draw_folder_path = args.drawings
 else:
     if_condition(False, 'Missed -t argument')
+
+if args.hmm_drawings:
+    if_condition(os.path.isdir(args.hmm_drawings), "hmm drawings folder doesn't exist")
+    hmm_draw_folder_path = args.hmm_drawings
+else:
+    if_condition(False, 'Missed -a argument')    
     
 if args.hmm_report:
     if_condition(os.path.isfile(args.hmm_report), "A hmm report file does not exists")
@@ -58,7 +65,7 @@ ictv_coverage = pd.read_csv(ictv_coverage_file)
 
 
 introduction_frame = ictv_coverage[['Virus name(s)', 'Host source',
-               'coverage', 'meandepth', 'Genus', 'Family', 'Realm']][:50]
+               'coverage', 'meandepth', 'Genus', 'Family', 'Realm']].query('coverage != 0')[:50]
 introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
 introduction_table = introduction_frame.to_numpy()
 
@@ -87,7 +94,7 @@ ictv_drawings = ictv_drawings.groupby(level=0).agg({i:lambda x: list(x) for i in
 
 host_dict = {}
 
-
+# Coverage images
 for host, row in ictv_drawings.iterrows():
     viruses = {}
     for virus_loc in range(len(row.Isolate_id)):
@@ -99,7 +106,7 @@ for host, row in ictv_drawings.iterrows():
         images = []
         for i in row.genbank_list[virus_loc]:
             try:
-                picture_path = glob.glob(f"{drawings_folder_path}/{virus_name}/*{i}*")[0]
+                picture_path = glob.glob(f"{coverage_draw_folder_path}/{virus_name}/*{i}*")[0]
             except Exception:
                 continue
             with open(picture_path, "rb") as image_file:
@@ -118,6 +125,27 @@ def key_func(x):
 host_dict = sorted(host_dict.items(), key=lambda x: key_func(x[0]))
 host_dict = {key:value for key, value in host_dict}
 
+
+list_of_contigs = hmm_frame.groupby('Name').count().query('Score != 0').reset_index().Name
+contigs_dict = {}
+images_hmm = []
+for contig in list_of_contigs:
+    models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
+    models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
+    
+    try:
+        picture_path = glob.glob(f"{hmm_draw_folder_path}/*{contig}*")[0]
+    except Exception:
+        continue
+    with open(picture_path, "rb") as image_file:
+        encoded_image = base64.b64encode(image_file.read()).decode()
+        html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
+        details_image = styles.Details({f'<h3>{contig}:{models}<h3>': html_image}).make_details()
+        images_hmm.append(details_image)
+images_hmm = '\n'.join(images_hmm)
+            
+images_hmm = styles.Details({'<h2>Contigs</h2>\n': images_hmm}).make_details()
+
     
 style = styles.set_style
 
@@ -135,7 +163,7 @@ table_hmm = styles.Table(hmm_table, hmm_header).make_table()
 
 details = styles.Details(host_dict).make_details()
 
-out = style.replace('Sample Name', sample_name) + greatings + table_html + hmm_greetings +  table_hmm + details
+out = style.replace('Sample Name', sample_name) + greatings + table_html + hmm_greetings +  table_hmm + details + images_hmm
 
 with open(output, 'w') as f:
     f.write(out)

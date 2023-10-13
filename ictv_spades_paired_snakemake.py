@@ -182,6 +182,8 @@ rule hmm_scan:
     params:
         reference = HMM_folder,
     threads: 10
+    priority:
+        38
     conda: 'envs/hmm_scan.yaml'
     output:
         read1=f'{base}/hmm_results/{{file}}.csv'
@@ -198,28 +200,46 @@ rule hmm_report:
         read1=f'{base}/hmm_results/{{file}}.csv'
     params:
         reference = HMM_info,
-    conda: 'envs/hmm_scan.yaml'
+    conda: 'envs/plot_hmm.yaml'
+    priority:
+        40
     output:
         f'{base}/hmm_reports/{{file}}.csv'
     shell:
         f"""
-        python scripts/generate_hmm_report.py -i {{input.read1}} -o {{output}} -m {{params.reference}}
+        python scripts/generate_hmm_report.py -i {{input.read1}} -o {{output}} -m {{params.reference}} 
         
         """       
 
-
+rule plot_hmm:
+    input:
+        report=f'{base}/hmm_reports/{{file}}.csv'
+    output: directory(f'{base}/hmm_plots/{{file}}/')
+    priority:
+        41
+    conda:
+        'envs/plot_hmm.yaml'
+    params:
+        reference=genome_reference
+    
+    shell:
+        """
+        python scripts/plot_hmm.py -i {input.report} -o {output}
+        """
+        
 
 rule make_html:
     input:
         coverage=base + 'ictv_coverage/' + '{file}' + '.csv',
         drawings=base+'drawings/'+ '{file}',
-        hmm=f'{base}/hmm_reports/{{file}}.csv'
+        hmm=f'{base}/hmm_reports/{{file}}.csv',
+        hmm_plots = f'{base}/hmm_plots/{{file}}/'
     output: f'{base}/htmls/{{file}}.html'
     priority:
-        39
+        45
     shell:
         """
-        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm}
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -a {input.hmm_plots}
         """           
     
         
