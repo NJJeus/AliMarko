@@ -36,7 +36,7 @@ else:
 if args.threshold:
     threshold = args.threshold
 else:
-    threshold = 0.2
+    threshold = 0.05
 
 dirname = os.path.dirname(os.path.normpath(output_file))
 print(dirname)
