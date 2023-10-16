@@ -65,7 +65,7 @@ ictv_coverage = pd.read_csv(ictv_coverage_file)
 
 
 introduction_frame = ictv_coverage[['Virus name(s)', 'Host source',
-               'coverage', 'meandepth', 'Genus', 'Family', 'Realm']].query('coverage != 0')[:50]
+               'coverage', 'meandepth', 'Genus', 'Family', 'Realm']].query('coverage != 0')
 introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
 introduction_table = introduction_frame.to_numpy()
 
