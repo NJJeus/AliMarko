@@ -60,13 +60,20 @@ for contig in data.Name.unique():
     for index, row in contig_data.iterrows():
         i-=4
         try:
-            color = str(colors[int(((np.log10(row.Score)-min_score)/(max_score-min_score) * 20))])
+            try:
+                color = str(colors[int(((np.log10(row.Score)-min_score)/(max_score-min_score) * 20))])
+            except Exception:
+                color = str(colors[0])
+            
             plt.arrow(row.From, i, row.To-row.From, 0, 
-                 color=color,
-                width=0.2, head_width=0.4, length_includes_head=True, head_length=300)
+             color=color,
+            width=0.2, head_width=0.4, length_includes_head=True, head_length=abs(row.To-row.From)/10)
+            
             plt.text((row.From + row.To)/2, i+1, f'{row.Query}:{row["Positive terms"]}', fontdict={'size':6}, ha='center')
         except Exception:
+            print(f'error with {contig}, {row.Query}')
             pass
+        
         
 
     plt.yticks([])
@@ -74,7 +81,7 @@ for contig in data.Name.unique():
     import matplotlib.patches as mpatches
     handles = []
     for col, lab in zip(colors[::-4], range(20, -4, -4)):
-        l = int(lab * ((contig_data.Score.max()/20)))//100 * 100
+        l = int(lab * ((contig_data.Score.max()/20))) // 100 * 100
         handles.append(mpatches.Patch(color=str(col), label=l))
     
     plt.plot([0, length_contig], [0, 0],linewidth=4.0)
