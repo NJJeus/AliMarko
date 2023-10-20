@@ -1,0 +1,10 @@
+name: plot_hmm
+channels:
+  - default
+dependencies:
+  - pip
+  - pip:
+      - matplotlib
+      - seaborn
+      - numpy
+      - pandas
