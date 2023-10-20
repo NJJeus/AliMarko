@@ -2,15 +2,14 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import seaborn as sns
 sns.set_theme()
 import os
 
 import argparse
 
-import colour
-red = colour.Color('#2B65EC')
-colors = list(red.range_to(colour.Color('red'), 21))
+cmap = cm.ScalarMappable(cmap='jet')  # Choose the colormap
 
 
 description = """The script gets a report csv hmm file and returns a folder with plots fro all contings"""
@@ -50,44 +49,44 @@ data = pd.read_csv(input_file, index_col=0)
 
 for contig in data.Name.unique():
     plt.clf()
-    plt.figure(dpi=600)
+    fig = plt.figure(dpi=400)
+    ax = fig.add_subplot(1,1,1)
     contig_data = data.query(f'Name == "{contig}"')
     length_contig = contig_data.Length_contig.max()
-    max_score = np.log10(contig_data.Score.max())
-    min_score = np.log10(contig_data.Score.min())
-    
+    max_score = contig_data.Score.max()
+    min_score = contig_data.Score.min()
+    if max_score != min_score:
+        pass  # Set the values for the colorbar
+    else:
+        min_score, max_score = 0, min_score
+    cmap = cm.ScalarMappable(cmap='jet') 
+    cmap.set_array([min_score, max_score]) 
+    cmap.autoscale()
     i=0
     for index, row in contig_data.iterrows():
         i-=4
-        try:
-            try:
-                color = str(colors[int(((np.log10(row.Score)-min_score)/(max_score-min_score) * 20))])
-            except Exception:
-                color = str(colors[0])
-            
-            plt.arrow(row.From, i, row.To-row.From, 0, 
-             color=color,
-            width=0.2, head_width=0.4, length_includes_head=True, head_length=abs(row.To-row.From)/10)
-            
-            plt.text((row.From + row.To)/2, i+1, f'{row.Query}:{row["Positive terms"]}', fontdict={'size':6}, ha='center')
-        except Exception:
-            print(f'error with {contig}, {row.Query}')
-            pass
+        color = cmap.to_rgba(row.Score)
+
+        ax.arrow(row.From, i, row.To-row.From, 0, 
+         color=color,
+        width=0.2, head_width=0.4, length_includes_head=True, 
+                 head_length=max(abs(row.To-row.From)/10, length_contig/100))
+        arrowtext = f'{row.Query}:{row["Positive terms"]}, {row.Taxon}'
+        ax.text((row.From + row.To)/2, i+1, arrowtext, fontdict={'size':6}, ha='center')
         
         
 
-    plt.yticks([])
+    ax.set_yticks([])
+    cbar = plt.colorbar(cmap, orientation='vertical', ticks=np.linspace(min_score, max_score, num=5), ax=ax)
+    cbar.set_label('Score')
+        
 
-    import matplotlib.patches as mpatches
-    handles = []
-    for col, lab in zip(colors[::-4], range(20, -4, -4)):
-        l = int(lab * ((contig_data.Score.max()/20))) // 100 * 100
-        handles.append(mpatches.Patch(color=str(col), label=l))
     
-    plt.plot([0, length_contig], [0, 0],linewidth=4.0)
-    plt.text(length_contig/2, 1, contig, ha='center')
+    ax.plot([0, length_contig], [0, 0],linewidth=4.0)
+    ax.text(length_contig/2, 1, contig, ha='center')
     
-    plt.legend(handles=handles, bbox_to_anchor=(1.05, 1), title='Score')
-    plt.ylim([i-2, 0.2])
-    plt.xlim([0, length_contig]);
+    
+    ax.set_ylim([i-2, 0.2])
+    ax.set_xlim([0, length_contig]);
     plt.savefig(f'{output_dir}/{contig}.png')
+    plt.close()
