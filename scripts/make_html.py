@@ -70,7 +70,7 @@ introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean d
 introduction_table = introduction_frame.to_numpy()
 
 
-hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To']]
+hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
 hmm_frame[['Score', 'Threshold']] = hmm_frame[['Score', 'Threshold']].round(3)
 hmm_header = hmm_frame.columns
 hmm_table = hmm_frame.to_numpy()
@@ -119,14 +119,18 @@ for host, row in ictv_drawings.iterrows():
     host_dict.update({f'<h2>{host}</h2>':styles.Details(viruses).make_details()})
 
 
-order = [f'<h2>{host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates', 'invertebrates, vertebrates', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
+order = [f'<h2>{host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
+order = list(set(order + [f'<h2>{i}</h2>' for i in host_dict.keys()]))
 def key_func(x):
     return order.index(x)
 host_dict = sorted(host_dict.items(), key=lambda x: key_func(x[0]))
 host_dict = {key:value for key, value in host_dict}
 
 
-list_of_contigs = hmm_frame.groupby('Name').count().query('Score != 0').reset_index().Name
+positive_contigs = hmm_frame.query('Score_ratio > 2').groupby('Name').count().query('Score > 0').reset_index().Name
+positive_contigs = positive_contigs[positive_contigs.isin(positive_contigs)]
+
+list_of_contigs = hmm_frame['Name'][hmm_frame['Name'].isin(positive_contigs)].unique()
 contigs_dict = {}
 images_hmm = []
 for contig in list_of_contigs:
