@@ -71,7 +71,7 @@ introduction_table = introduction_frame.to_numpy()
 
 
 hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
-hmm_frame[['Score', 'Threshold']] = hmm_frame[['Score', 'Threshold']].round(3)
+hmm_frame[['Score', 'Threshold', 'Score_ratio']] = hmm_frame[['Score', 'Threshold']].round(3)
 hmm_header = hmm_frame.columns
 hmm_table = hmm_frame.to_numpy()
 
@@ -133,7 +133,9 @@ positive_contigs = positive_contigs[positive_contigs.isin(positive_contigs)]
 list_of_contigs = hmm_frame['Name'][hmm_frame['Name'].isin(positive_contigs)].unique()
 contigs_dict = {}
 images_hmm = []
+table_contigs = []
 for contig in list_of_contigs:
+    table_contig = hmm_frame.query(f'Name == "{contig}"')
     models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
     models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
     
@@ -143,8 +145,8 @@ for contig in list_of_contigs:
         continue
     with open(picture_path, "rb") as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode()
-        html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
-        details_image = styles.Details({f'<h3>{contig}:{models}<h3>': html_image}).make_details()
+        html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
+        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns).make_table()+'\n'+ html_image}).make_details()
         images_hmm.append(details_image)
 images_hmm = '\n'.join(images_hmm)
             

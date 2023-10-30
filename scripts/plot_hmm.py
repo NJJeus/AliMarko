@@ -88,5 +88,5 @@ for contig in data.Name.unique():
     
     ax.set_ylim([i-2, 0.2])
     ax.set_xlim([0, length_contig]);
-    plt.savefig(f'{output_dir}/{contig}.png')
+    plt.savefig(f'{output_dir}/{contig}.svg')
     plt.close()
