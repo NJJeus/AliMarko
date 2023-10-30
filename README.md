@@ -1,4 +1,6 @@
-# surprise_ictv_pipeline  
+
+# surprise_ictv_pipeline
+v0.5  
 Pipeline for Virus Sequence Detection  
 Requirements:
 * snakemake
