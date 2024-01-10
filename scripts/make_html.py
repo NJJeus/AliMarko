@@ -169,7 +169,7 @@ table_hmm = styles.Table(hmm_table, hmm_header).make_table()
 
 details = styles.Details(host_dict).make_details()
 
-out = style.replace('Sample Name', sample_name) + greatings + table_html + hmm_greetings +  table_hmm + details + images_hmm
+out = style.replace('Sample Name', sample_name) + greatings + table_html + hmm_greetings +  table_hmm + details + images_hmm + '<p>\n</p>'
 
 with open(output, 'w') as f:
     f.write(out)

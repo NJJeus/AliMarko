@@ -49,7 +49,7 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        kraken2 --threads {{threads}} --confidence 0.0 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
+        kraken2 --threads {{threads}} --confidence 0.7 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
         gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
         """
@@ -65,12 +65,12 @@ rule spades:
     conda:
         'envs/spades.yaml'
     threads: 20
-    priority: 1
+    priority: 5
     params:
         sample = lambda wildcards: wildcards.file
     shell:
         f"""
-        spades.py --meta -1 {{input.read1}} -2 {{input.read2}} -o {base}/spades/{{params.sample}} -t {{threads}}
+        spades.py --meta -1 {{input.read1}} -2 {{input.read2}} -o {base}/spades/{{params.sample}} -t {{threads}} 
         """
     
     
@@ -83,11 +83,13 @@ rule deduplicate_fastq:
         read2=base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz'
     threads: 10
     priority: 8
+    params: 
+        quality = 15
     conda:
         "envs/fastp.yaml"
     shell:
         """
-        fastp -w {threads} -i {input.read1} -I {input.read2} -o {output.read1} -O {output.read2}
+        fastp -w {threads} -i {input.read1} -I {input.read2} -o {output.read1} -O {output.read2} -q {params.quality} --dedup
         """
 
 rule map_extracted_fastq:
