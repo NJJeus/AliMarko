@@ -1,7 +1,7 @@
 
 # AliMarko (alignment & markov models)
 v0.5  
-Pipeline for Virus Sequence Detection  
+A Pipeline for Virus Sequence Detection  
 Requirements:
 * snakemake
 * mamba
