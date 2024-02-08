@@ -124,7 +124,7 @@ indeces = []
 tmp_names = []
 fragments_len = []
 
-for index, item in data.query('coverage > 0.1 & meanmapq > 19').iterrows():
+for index, item in data.query('coverage > 0.05 & meanmapq > 19').iterrows():
     for i in range(len(item['tmp_rname'])):
         indeces.append(index)
         tmp_names.append(item.tmp_rname[i])

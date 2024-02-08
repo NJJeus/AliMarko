@@ -21,6 +21,7 @@ parser.add_argument('-t', '--threads', type=str, help='Amount of threads to use'
 parser.add_argument('-b', '--batch', type=str, help='Batch size in which sequences will be analyzed')
 parser.add_argument('-s', '--to_stop', type=str, help='Translate sequences only to stop codon')
 parser.add_argument('-r', '--threshold', type=str, help='Minimum amino acid sequence length for analysis')
+parser.add_argument('-l', '--positive_list', type=str, help='A csv file with HMM to use. It shold have only one column')
 
 args = parser.parse_args()
 
@@ -79,7 +80,11 @@ if args.batch:
     batch = int(args.batch)
 else:
     batch = 1000
-   
+    
+if args.positive_list:
+    pos_list = set(pd.read_csv(args.positive_list, header=None)[0].to_list())
+else:
+    pos_list = False
 
 if args.threshold:
     threshold = int(args.threshold)
@@ -264,6 +269,10 @@ list_of_files = glob.glob(hmm_path)
 for i in list_of_files:
     with pyhmmer.plan7.HMMFile(i) as hmm_file:
         hmms.append(hmm_file.read())
+print(pos_list)
+print(str(hmms[0].name))
+if pos_list:
+    hmms = [h for h in hmms if str(h.name.decode("utf-8")) in pos_list]
 hmm = hmms[0]
 
 

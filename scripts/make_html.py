@@ -78,7 +78,7 @@ hmm_table = hmm_frame.to_numpy()
 
 
 
-ictv_drawings = ictv_coverage.query('coverage > 0.1').set_index('Host source')
+ictv_drawings = ictv_coverage.query('coverage > 0.05').set_index('Host source')
 
 ictv_drawings['genbank_list'] = ictv_drawings['Virus GENBANK accession'].apply(lambda i :
                                                                        [el.split(":")[-1] for el in i.replace(' ', '').split(';')])

@@ -14,6 +14,7 @@ parser.add_argument('-i', '--input', type=str, help='File or regular expression 
 parser.add_argument('-i2', '--input2', type=str, help='File or regular expression of file')
 parser.add_argument('-o', '--output', type=str, help='Output folder')
 parser.add_argument('-m', '--hmm_info', type=str, help='A folder with drawings')
+parser.add_argument('-t', '--hmm_out', type=str, help='A one column csv with models, that have passed the treshold')
 args = parser.parse_args()
 
 def if_condition(x, message):
@@ -39,6 +40,11 @@ if args.output:
     output = args.output
 else:
     if_condition(False, 'Missed -o argument')
+    
+if args.hmm_out:
+    hmm_output = args.hmm_out
+else:
+    hmm_output = False
 
 if args.hmm_info:
     if_condition(os.path.isfile(args.hmm_info), "drawings folder doesn't exist")
@@ -51,7 +57,7 @@ else:
 def export_seq_data(seq):
     name, chain, part, length, length_contig, skew, sdf = seq.split(';')
     chain, part, length, skew, length_contig = chain.replace('chain_', ''), part.replace('part_', ''), length.replace('len_', ''), skew.replace('skew_', ''), length_contig.replace('len_contig_', '')
-    frame = int(chain.replace('+1', '3').replace('-1', '4')) + int(skew)
+    frame = int(chain.replace('+1', '1').replace('-1', '4')) + int(skew)
     return [name, part, length, frame, length_contig]
 
 
@@ -93,6 +99,9 @@ if args.input2:
 
     
 report = report.query('Score_ratio > 1.5')
+
+if hmm_output:
+    report[['Query']].drop_duplicates().to_csv(hmm_output, header=None, index=None)
 
 report.reset_index(drop=True).to_csv(output)
 
