@@ -17,7 +17,7 @@ files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
 want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
 
-want_all = (expand(f"{base}/phylo/msas_performed/{{file}}/", file=files))
+#want_all = (expand(f"{base}/phylo/trees_drawings/{{file}}/", file=files))
 
 rule all:
     input: base + 'result_coverage_table.tsv',  want_all, f'{base}/phylo/ictv_report.csv'
@@ -265,6 +265,9 @@ rule collect_msa:
         """
         python scripts/collect_msa.py -g {input.genome_reference} -c {input.contig_fasta} -i {input.ictv_report} -r {input.contig_report} -o {output}
         """
+
+
+
         
 rule perform_msa:
     input: directory(f"{base}/phylo/msas/{{file}}/"),
@@ -272,10 +275,22 @@ rule perform_msa:
     threads: 2
     conda: 'envs/phylo.yaml'
     shell:
-        "zsh -c '. $HOME/.zshrc; for i in $(ls {input}/*.fasta); do; muscle -align {input}/$i -output {output}/$i -t {threads}; done;'"
+        "bash scripts/muscle_script.sh {input} {output} {threads}"
     
-        
-        
+rule create_tree:
+    input: directory(f"{base}/phylo/msas_performed/{{file}}/"),
+    output: directory(f"{base}/phylo/trees/{{file}}/")
+    threads: 5
+    conda: 'envs/phylo.yaml'
+    shell:
+        "bash scripts/create_tree.sh {input} {output} {threads}"        
+ 
+rule draw_tree:
+    input: directory(f"{base}/phylo/trees/{{file}}/")
+    output: directory(f"{base}/phylo/trees_drawings/{{file}}/")
+    conda: 'envs/phylo.yaml'
+    shell:
+        "python scripts/draw_trees.py -i {input} -o {output}"
 
 rule plot_hmm:
     input:
@@ -299,13 +314,14 @@ rule make_html:
         coverage=base + 'ictv_coverage/' + '{file}' + '.csv',
         drawings=base+'drawings/'+ '{file}',
         hmm=f'{base}/hmm_reports/{{file}}.csv',
-        hmm_plots = f'{base}/hmm_plots/{{file}}/'
+        hmm_plots = f'{base}/hmm_plots/{{file}}/',
+        trees = directory(f"{base}/phylo/trees_drawings/{{file}}/")
     output: f'{base}/htmls/{{file}}.html'
     priority:
         45
     shell:
         """
-        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -a {input.hmm_plots}
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -a {input.hmm_plots} -t {input.trees}
         """           
     
         

@@ -50,7 +50,7 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        kraken2 --threads {{threads}} --confidence 0.0 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
+        kraken2 --threads {{threads}} --confidence 0.7 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
         gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
         """
@@ -227,7 +227,7 @@ rule make_html:
         39
     shell:
         """
-        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm}
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -t 
         """           
     
         

@@ -23,6 +23,8 @@ parser.add_argument('-o', '--output', type=str, help='An output file')
 parser.add_argument('-d', '--drawings', type=str, help='A folder with drawings')
 parser.add_argument('-a', '--hmm_drawings', type=str, help='A folder with hmm drawings')
 parser.add_argument('-m', '--hmm_report', type=str, help='A hmm report file')
+parser.add_argument('-t', '--trees_folder', type=str, help='A folder with trees ')
+
 
 args = parser.parse_args()
 
@@ -53,11 +55,18 @@ if args.hmm_report:
     if_condition(os.path.isfile(args.hmm_report), "A hmm report file does not exists")
     hmm_report = args.hmm_report
 else:
-    if_condition(False, 'Missed -m argument')   
+    if_condition(False, 'Missed -m argument') 
+
+if args.trees_folder:
+    if_condition(os.path.isdir(args.trees_folder), "drawings folder doesn't exist")
+    trees_folder = args.trees_folder
+else:
+    if_condition(False, 'Missed -t argument')
+
 
 sample_name = os.path.splitext(os.path.basename(ictv_coverage_file))[0]
 ictv_coverage = pd.read_csv(ictv_coverage_file)
-
+tree_files = glob.glob(f'{trees_folder}/*')
 
 
 
@@ -143,10 +152,32 @@ for contig in list_of_contigs:
         picture_path = glob.glob(f"{hmm_draw_folder_path}/*{contig}*")[0]
     except Exception:
         continue
+    
+    trees_pictures = ''
+    for tree in [i for i in tree_files if contig in i]:
+        print(tree)
+        file_path = 'your_file.txt'
+        lines_to_concatenate = []
+
+        with open(tree, 'r') as file:
+            lines = file.readlines()
+
+            # Read lines starting from the 4th line
+            for line_number, line in enumerate(lines):
+                if line_number >= 3:  # 4th line has an index of 3
+                    lines_to_concatenate.append(line.strip())
+
+        # Concatenate all lines into one string
+        concatenated_string = ''.join(lines_to_concatenate)
+        trees_pictures += '\n ' + concatenated_string + '\n '
+
+        
+        
+        
     with open(picture_path, "rb") as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode()
         html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
-        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns).make_table()+'\n'+ html_image}).make_details()
+        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns).make_table()+'\n'+ html_image + '\n' + trees_pictures}).make_details()
         images_hmm.append(details_image)
 images_hmm = '\n'.join(images_hmm)
             
