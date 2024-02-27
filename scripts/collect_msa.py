@@ -2,6 +2,7 @@
     
 import pandas as pd
 from Bio import SeqIO
+from Bio import SeqIO
 from Bio.SeqIO import SeqRecord
 import subprocess
 import argparse
@@ -136,6 +137,7 @@ taxo_index = pd.DataFrame({'ictv_taxo_index':indeces, 'accessions':accessions}).
 taxo_index = taxo_index.to_dict(orient='index')
 
 contigs = pd.read_csv(contigs_report, index_col=0)
+contigs = contigs.query('Lengh > 300')
 
 contigs_names = contigs['Name'].unique()
 
@@ -145,14 +147,19 @@ for name_c_contig in contigs_names:
     original_array = contigs.query(f"Name == '{name_c_contig}'").reset_index()[['index', 'From', 'To']].to_numpy()
     reshaped_array = [[i[0], [i[1], i[2]]] for i in original_array]
     filtered_segments, saved_indices = remove_intersecting_segments(reshaped_array)
-    contigs_sample = contigs.iloc[saved_indices]
+    try:
+        contigs_sample = contigs.iloc[saved_indices]
+    except Exception:
+        contigs_sample = contigs.head(3)
+        
 
     contig_rows = contigs_sample[['From', 'To', 'Frame', 'Query']].to_dict(orient='index')
+    
 
     hmms = list(contigs_sample.Query.unique())
 
 
-    for cur_hmm in hmms:
+    for cur_hmm in hmms[:3]:
 
         ictv_names = ictv.query(f'Query == "{cur_hmm}"')[['Name', 'From', 'To', 'Frame']].drop_duplicates(subset='Name').set_index('Name').to_dict(orient='index')
 
@@ -178,11 +185,11 @@ for name_c_contig in contigs_names:
                      sequence.seq = sequence.seq[From+shift:To].translate()
                 else:
                     sequence.seq = sequence.seq[From:To].reverse_complement()[shift:].translate()
-                sequence.id = taxo_index[seq_id]['ictv_taxo_index'].replace(' ', '_')
+                sequence.id = str(taxo_index[seq_id]['ictv_taxo_index']).replace(' ', '_'.replace("|", "__"))
 
                 genome_seqs.append(sequence)
 
-        from Bio import SeqIO
+        
         contig_seqs = []
 
         # Open the FASTA file and parse its contents
@@ -208,7 +215,7 @@ for name_c_contig in contigs_names:
                         aa_seq = SeqRecord(sequence.seq[From+shift:To].translate())
                     else:
                         aa_seq = SeqRecord(sequence.seq[From:To].reverse_complement()[shift:].translate())
-                    aa_seq.id = sequence.name + "|"  + contig_rows[k]['Query'] + '|' + str(k)
+                    aa_seq.id = sequence.name + "__"  + contig_rows[k]['Query'] + '__' + str(k)
                     contig_seqs.append(aa_seq)
                     print(f"ID: {seq_id}")
 
