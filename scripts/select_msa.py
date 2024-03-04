@@ -41,7 +41,7 @@ SeqIO.write(sequence_of_interest, temp_query_file, 'fasta')
 make_db = f"makeblastdb -in {file} -dbtype prot -out {temp_database_file}"
 subprocess.run(make_db, shell=True)
 
-blast_cmd = f"blastp -query {temp_query_file} -db {temp_database_file} -out {blast_results} -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -gapopen 11 -gapextend 1"
+blast_cmd = f"blastp -query {temp_query_file} -db {temp_database_file} -out {blast_results} -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -gapopen 11 -gapextend 1 -evalue 100"
 
 # Run the BLAST command using subprocess
 subprocess.run(blast_cmd, shell=True)
@@ -53,15 +53,28 @@ for tm_file in glob.glob(f"{name_output}.tmp*"):
 
 column_names = ['qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
 
-df = pd.read_csv(blast_results, sep='\t', header=None, names=column_names).sort_values(by='bitscore', ascending=False)
+df = pd.read_csv(blast_results, sep='\t', header=None, names=column_names).sort_values(by='bitscore', ascending=False).drop_duplicates(subset='sseqid')
 
 # Display the DataFrame
 selected_ids = df.head(n_seqs+1).sseqid.to_list()
+its_too_short = True if len(selected_ids) < 10 else False
 
-
-seqs = []
-with open(file, 'r') as handle:
-    for record in SeqIO.parse(handle, 'fasta'):
-        if record.id in selected_ids:
+if its_too_short:
+    i=0
+    seqs = []
+    with open(file, 'r') as handle:
+        for record in SeqIO.parse(handle, 'fasta'):
+            i+=1
             seqs.append(record)
-SeqIO.write(seqs, output_file, 'fasta')
+            if i > 10:
+                break
+    SeqIO.write(seqs, output_file, 'fasta')
+else:
+    i=0
+    seqs = []
+    with open(file, 'r') as handle:
+        for record in SeqIO.parse(handle, 'fasta'):
+            if record.id in selected_ids or its_too_short:
+                seqs.append(record)
+                
+    SeqIO.write(seqs, output_file, 'fasta')
