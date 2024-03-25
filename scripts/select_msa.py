@@ -20,7 +20,7 @@ args = parser.parse_args()
 if args.n_seqs:
     n_seqs = int(args.n_seqs)
 else:
-    n_seqs = 50
+    n_seqs = 30
 
 
 
@@ -57,6 +57,7 @@ df = pd.read_csv(blast_results, sep='\t', header=None, names=column_names).sort_
 
 # Display the DataFrame
 selected_ids = df.head(n_seqs+1).sseqid.to_list()
+print(f'\n \n \n \n {len(selected_ids)}')
 its_too_short = True if len(selected_ids) < 10 else False
 
 if its_too_short:
@@ -74,7 +75,7 @@ else:
     seqs = []
     with open(file, 'r') as handle:
         for record in SeqIO.parse(handle, 'fasta'):
-            if record.id in selected_ids or its_too_short:
+            if record.id in selected_ids:
                 seqs.append(record)
                 
     SeqIO.write(seqs, output_file, 'fasta')

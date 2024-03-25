@@ -156,22 +156,10 @@ for contig in list_of_contigs:
     trees_pictures = ''
     for tree in [i for i in tree_files if contig in i]:
         print(tree)
-        file_path = 'your_file.txt'
-        lines_to_concatenate = []
-
-        with open(tree, 'r') as file:
-            lines = file.readlines()
-
-            # Read lines starting from the 4th line
-            for line_number, line in enumerate(lines):
-                if line_number >= 3:  # 4th line has an index of 3
-                    lines_to_concatenate.append(line.strip())
-
-        # Concatenate all lines into one string
-        concatenated_string = ''.join(lines_to_concatenate)
-        trees_pictures += '\n ' + concatenated_string + '\n '
-
-        
+        with open(tree, "rb") as tree_image_file:
+            tree_encoded_image= base64.b64encode(tree_image_file.read()).decode()
+            html_tree = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{tree_encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
+            trees_pictures = trees_pictures + '\n' + html_tree       
         
         
     with open(picture_path, "rb") as image_file:

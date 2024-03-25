@@ -80,12 +80,13 @@ def create_report(input_file, hmm_info):
     report = input_file.merge(hmm_info, left_on='Query', right_on='Model_ID', how='left').drop('Model_ID', axis=1)
     report['Score_ratio'] = report.Score/report.Threshold
     report = report.sort_values('Score_ratio', ascending=False)
-    report[['Name', 'Part', 'Lengh', 'Frame', 'Length_contig']] = np.array(report.Name.apply(lambda  x: export_seq_data(x)).to_list())
-    report[['Lengh', 'From', 'To', 'Part', 'Frame', 'Length_contig']] = report[['Lengh', 'From', 'To', 'Part', 'Frame', 'Length_contig']].astype('int')
-    report[['From', 'To']] = get_coordinate(report)
-
-    report = report.drop('Part', axis=1)
-    
+    try:
+        report[['Name', 'Part', 'Lengh', 'Frame', 'Length_contig']] = np.array(report.Name.apply(lambda  x: export_seq_data(x)).to_list())
+        report[['Lengh', 'From', 'To', 'Part', 'Frame', 'Length_contig']] = report[['Lengh', 'From', 'To', 'Part', 'Frame', 'Length_contig']].astype('int')
+        report[['From', 'To']] = get_coordinate(report)
+        report = report.drop('Part', axis=1)
+    except Exception:
+        None
     return report
 
 

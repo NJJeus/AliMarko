@@ -4,13 +4,13 @@ import glob
 import random
 
 
-base = "DATA_test/"
-input_folder = "DATA_test/raw_fastq/"
+base = "BAT2/"
+input_folder = "/mnt/disk1/RUNS/popov_ns/BAT2_trimmed/"
 genome_reference = 'ictv_virus_reference.fa'
-HMM_folder = '../DATA/profiles/MINION/Wide/'
+HMM_folder = '/mnt/disk1/PROJECTS/SURPRISE/VIRALTOOL/DATA/profiles/MINION/wide_pro_eu/'
 HMM_info = 'ictv_tables/hmm_info.csv'
 
-suffix = '_single.fastq.gz'
+suffix = '.fq.gz'
 
 files, = glob_wildcards(input_folder+"{file}"+ suffix)
 
@@ -20,7 +20,7 @@ print('Files:', end=' ')
 print(files)
 
 rule all:
-    input: base + 'result_coverage_table.tsv',  want_all
+    input: base + 'result_coverage_table.tsv',  want_all, f'{base}/phylo/ictv_report.csv'
     
 rule index_reference:
     input: genome_reference
@@ -191,29 +191,126 @@ rule hmm_report:
         reference = HMM_info,
     conda: 'envs/hmm_scan.yaml'
     output:
-        f'{base}/hmm_reports/{{file}}.csv'
+        report=f'{base}/hmm_reports/{{file}}.csv',
+        hmm_list=f'{base}/phylo/{{file}}/hmm_list.csv'
     shell:
         f"""
-        python scripts/generate_hmm_report.py -i {{input.read1}} -o {{output}} -m {{params.reference}}
+        python scripts/generate_hmm_report.py -i {{input.read1}} -o {{output.report}} -m {{params.reference}} -t {{output.hmm_list}}
         
         """         
 
+rule generalise_hmm_list:
+    input: expand(f'{base}/phylo/{{file}}/hmm_list.csv', file=files)
+    output: base + 'phylo/' + 'ictv_list.csv'
+    shell:
+        """
+        cat {input} > {output}
+        """        
+ 
+rule analyse_ictv:
+    input: 
+        read1=genome_reference,
+        hmm_list = base + 'phylo/' + 'ictv_list.csv'
+    params:
+        reference = HMM_folder
+    threads: 10
+    priority:
+        38
+    conda: 'envs/hmm_scan.yaml'
+    output:
+        read1=f'{base}/phylo/ictv_result.csv'
+    shell:
+        f"""
+        python scripts/analyze_seq_hmm.py -f {{input.read1}} -o {{output.read1}} -m {{params.reference}} -t {{threads}}  --batch 10000 -l {{input.hmm_list}}
+        """
+
+rule ictv_report:
+    input: 
+        read1=f'{base}/phylo/ictv_result.csv'
+    params:
+        reference = HMM_info,
+    conda: 'envs/plot_hmm.yaml'
+    priority:
+        40
+    output:
+        report=f'{base}/phylo/ictv_report.csv'
+    shell:
+        f"""
+        python scripts/generate_hmm_report.py -i {{input.read1}} -o {{output.report}} -m {{params.reference}} 
+        """
         
+rule collect_msa:
+    input:
+        genome_reference = genome_reference,
+        contig_fasta = f"{base}/spades/{{file}}/contigs.fasta",
+        ictv_report = f'{base}/phylo/ictv_report.csv',
+        contig_report = f'{base}/hmm_reports/{{file}}.csv'
+    output:
+        directory(f"{base}/phylo/msas/{{file}}/")
+    conda: 'envs/phylo.yaml'
+    shell:
+        """
+        python scripts/collect_msa.py -g {input.genome_reference} -c {input.contig_fasta} -i {input.ictv_report} -r {input.contig_report} -o {output}
+        """
+
+
+
+        
+rule perform_msa:
+    input: directory(f"{base}/phylo/msas/{{file}}/"),
+    output: directory(f"{base}/phylo/msas_performed/{{file}}/")
+    threads: 2
+    conda: 'envs/phylo.yaml'
+    shell:
+        "bash scripts/muscle_script.sh {input} {output} {threads}"
+    
+rule create_tree:
+    input: directory(f"{base}/phylo/msas_performed/{{file}}/"),
+    output: directory(f"{base}/phylo/trees/{{file}}/")
+    threads: 5
+    conda: 'envs/phylo.yaml'
+    shell:
+        "bash scripts/create_tree.sh {input} {output} {threads}"        
+ 
+rule draw_tree:
+    input: directory(f"{base}/phylo/trees/{{file}}/")
+    output: directory(f"{base}/phylo/trees_drawings/{{file}}/")
+    conda: 'envs/phylo.yaml'
+    shell:
+        "python scripts/draw_trees.py -i {input} -o {output}"
+        
+rule plot_hmm:
+    input:
+        report=f'{base}/hmm_reports/{{file}}.csv'
+    output: directory(f'{base}/hmm_plots/{{file}}/')
+    priority:
+        41
+    conda:
+        'envs/plot_hmm.yaml'
+    params:
+        reference=genome_reference
+    
+    shell:
+        """
+        python scripts/plot_hmm.py -i {input.report} -o {output}
+        """
         
 rule make_html:
     input:
         coverage=base + 'ictv_coverage/' + '{file}' + '.csv',
         drawings=base+'drawings/'+ '{file}',
-        hmm=f'{base}/hmm_reports/{{file}}.csv'
+        hmm=f'{base}/hmm_reports/{{file}}.csv',
+        hmm_plots = f'{base}/hmm_plots/{{file}}/',
+        trees = directory(f"{base}/phylo/trees_drawings/{{file}}/")
     output: f'{base}/htmls/{{file}}.html'
     priority:
-        39
+        45
     shell:
         """
-        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm}
-        """
-
-
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -a {input.hmm_plots} -t {input.trees}
+        """           
+    
+        
 rule generalize_coverage:
     input: 
         expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files)
@@ -222,4 +319,3 @@ rule generalize_coverage:
         """
         python scripts/generalize_ictv.py -f {input} -o {output}
         """
-        
