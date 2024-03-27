@@ -111,7 +111,7 @@ introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean d
 introduction_table = introduction_frame.to_numpy()
 
 
-hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive tersms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
+hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
 hmm_frame[['Score', 'Threshold', 'Score_ratio']] = hmm_frame[['Score', 'Threshold', 'Score_ratio']].round(3)
 hmm_header = hmm_frame.columns
 hmm_table = hmm_frame.to_numpy()
