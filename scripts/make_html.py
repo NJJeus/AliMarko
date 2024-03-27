@@ -8,11 +8,25 @@ import numpy as np
 import glob
 import argparse
 
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+
 
 def if_condition(x, message):
     if not x:
         print(message)
         exit()
+        
+def create_palette(min_score, max_score):
+    return None
+
+
+def get_color(palette, value):
+    try:
+        color = mcolors.to_hex(palette.to_rgba(float(value)),keep_alpha=False)
+    except Exception:
+        return 'white'
+    return color
         
 description = """ Script that concatenate an ictv coverage data with drawings of coverage"""
 
@@ -28,7 +42,7 @@ parser.add_argument('-t', '--trees_folder', type=str, help='A folder with trees 
 
 args = parser.parse_args()
 
-
+palette = create_palette(0, 10)
 
 if args.coverage:
     if_condition(os.path.isfile(args.coverage), "An input file does not exists")
@@ -69,7 +83,25 @@ ictv_coverage = pd.read_csv(ictv_coverage_file)
 tree_files = glob.glob(f'{trees_folder}/*')
 
 
+def create_palette(min_score, max_score):
+    if max_score != min_score:
+        pass  # Set the values for the colorbar
+    else:
+        min_score, max_score = 0, min_score
+    cmap = cm.ScalarMappable(cmap='Blues') 
+    cmap.set_array([min_score, max_score*1.5]) 
+    cmap.autoscale()
+    return cmap
 
+
+def get_color(palette, value):
+    try:
+        color = mcolors.to_hex(palette.to_rgba(float(value)),keep_alpha=False)
+        print(f'{color} {value}')
+    except Exception:
+        print(f'error {value}')
+        return 'white'
+    return color
 
 
 
@@ -79,7 +111,7 @@ introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean d
 introduction_table = introduction_frame.to_numpy()
 
 
-hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
+hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive tersms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
 hmm_frame[['Score', 'Threshold', 'Score_ratio']] = hmm_frame[['Score', 'Threshold', 'Score_ratio']].round(3)
 hmm_header = hmm_frame.columns
 hmm_table = hmm_frame.to_numpy()
@@ -123,7 +155,7 @@ for host, row in ictv_drawings.iterrows():
                 images.append(f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>')
         images = '\n'.join(images)
 
-        viruses.update({f'<h3>{virus_name}</h3>':styles.Table(virus_list, ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ',' SNP Count']).make_table() + images})
+        viruses.update({f'<h3>{virus_name}</h3>':styles.Table(virus_list, ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ',' SNP Count'], palette, get_color).make_table() + images})
 
     host_dict.update({f'<h2>{host}</h2>':styles.Details(viruses).make_details()})
 
@@ -165,7 +197,7 @@ for contig in list_of_contigs:
     with open(picture_path, "rb") as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode()
         html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
-        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns).make_table()+'\n'+ html_image + '\n' + trees_pictures}).make_details()
+        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns, palette, get_color).make_table()+'\n'+ html_image + '\n' + trees_pictures}).make_details()
         images_hmm.append(details_image)
 images_hmm = '\n'.join(images_hmm)
             
@@ -180,11 +212,11 @@ greatings = f"""
 
 """.format(name=os.path.splitext(os.path.basename(ictv_coverage_file))[0])
 
-table_html =  styles.Table(introduction_table, introduction_header).make_table()
+table_html =  styles.Table(introduction_table, introduction_header, palette, get_color).make_table()
 
 hmm_greetings = f"<p>\n</p><h2> <center> HMM results </h2><p>\n</p>"
 
-table_hmm = styles.Table(hmm_table, hmm_header).make_table()
+table_hmm = styles.Table(hmm_table, hmm_header, palette, get_color).make_table()
 
 details = styles.Details(host_dict).make_details()
 

@@ -6,8 +6,8 @@ set_style = """
 	<style>
         .tableFixHead {
         overflow-y: auto; /* make the table scrollable if height is more than 200 px  */
-        max-height: 500px; /* gives an initial height of 200px to the table */
-        width: 50%;
+        max-height: 800px; /* gives an initial height of 200px to the table */
+        width: 80%;
         margin:auto;
         text-align: center;
                       }
@@ -17,6 +17,7 @@ set_style = """
         position: sticky; /* make the table heads sticky */
         top: 0px; /* table head will be placed from the top of the table and sticks to it */
         text-align: center;
+        fontsize: 8
                                 }
                                 
                                 
@@ -53,7 +54,7 @@ set_style = """
         text-align: center;
 		}
 		main {
-			max-width: 800px;
+			max-width: 1000px;
 			margin: 0 auto;
 			padding: 20px;
             text-align: center;
@@ -74,18 +75,24 @@ set_style = """
 			width: 100%;
 			margin-bottom: 20px;
 			background-color: #fff;
+            font-size: 12px;
 			box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
 		}
 		th, td {
 			text-align: center;
 			padding: 12px;
+            height: 8px;
+            font-size: 8px;
 			border-bottom: 1px solid #ddd;
 		}
 		th {
 			background-color: #18aa9d;
 			color: #fff;
 			font-weight: bold;
+            font-size: 12px;
+            
+            
 			text-transform: uppercase;
 		}
 		tr:hover {
@@ -97,20 +104,26 @@ set_style = """
 
 
 class Table:
-    def __init__(self, virus_2d_array, header):
+    def __init__(self, virus_2d_array, header, colorfunc, get_color):
         self.virus_array = virus_2d_array
         self.header = header
+        self.pallete = colorfunc
+        self.get_color = get_color
     def table_head(self):
-        table_head = '<div class="tableFixHead"><table align="center"> \n <thead> \n <tr>'
+        table_head = f'<div class="tableFixHead"><table align="center"> \n <thead> \n <tr>'
+
         
-        table_head += '\n'.join([f'<th>{c}</th>' for c in self.header])
+        table_head += '\n'.join([f'<th>{c}" </th>' for c in self.header])
         table_head + '</tr></thead>'
 
         return table_head
+
+    
     def table_body(self):
+
         body = '<tbody> \n '
         for line in self.virus_array:
-            table_line = '<tr>' + ''.join([f'<td>{i}</td>' for i in line]) + '</tr>'
+            table_line = '<tr>' + ''.join([f'<td style="background-color: {self.get_color(self.pallete, i)}; width=10; heigh=5">{i}</td>' for i in line]) + '</tr>'
             body += table_line
         body += '</tbody> \n </table></div>'
         return body
