@@ -20,7 +20,7 @@ print('Files:', end=' ')
 print(files)
 
 rule all:
-    input: base + 'result_coverage_table.tsv',  want_all, f'{base}/phylo/ictv_report.csv'
+    input: f"{base}/htmls/general_html.html",  want_all, f'{base}/phylo/ictv_report.csv'
     
 rule index_reference:
     input: genome_reference
@@ -311,11 +311,32 @@ rule make_html:
         """           
     
         
-rule generalize_coverage:
+rule make_general_files:
     input: 
-        expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files)
-    output: base + 'result_coverage_table.tsv'
+        coverages = base + 'ictv_coverage/',
+        hmms = base + 'hmm_reports/'
+    conda: 'envs/plot_hmm.yaml'
+    output: 
+        hmm_general = f'{base}/hmm_general.csv',
+        coverage_general = f'{base}/coverage_general.csv',
+        hmm_general_pic = f'{base}/hmm_general.png',
+        coverage_general_pic = f'{base}/coverage-general.csv'
     shell:
         """
-        python scripts/generalize_ictv.py -f {input} -o {output}
+        python scripts/make_general_plots.py -i {input.coverages} -m {input.hmms} -p {output.coverage_general_pic} -c {output.coverage_general} -t {output.hmm_general} -u {output.hmm_general_pic}
+
+        """
+        
+rule general_html:
+    input: 
+        hmm_general = f'{base}/hmm_general.csv',
+        coverage_general = f'{base}/coverage_general.csv',
+        hmm_general_pic = f'{base}/hmm_general.png',
+        coverage_general_pic = f'{base}/coverage-general.csv'
+    output: 
+        f"{base}/htmls/general_html.html"
+    conda: 'envs/plot_hmm.yaml'
+    shell:
+        """
+        python scripts/make_general_html.py -c {input.coverage_general} -e {input.coverage_general_pic} -m {input.hmm_general} -p {input.hmm_general_pic} -o {output} 
         """
