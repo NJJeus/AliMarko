@@ -16,6 +16,9 @@ def if_condition(x, message):
         print(message)
         exit()
         
+def header(line, level=1):
+    return f"<p>\n</p><h{level}><center>{line}</h2>"
+        
 description = """ Script that concatenate an ictv coverage data with drawings of coverage"""
 
 parser = argparse.ArgumentParser(description=description)
@@ -96,9 +99,9 @@ def create_palette(min_score, max_score):
 def get_color(palette, value):
     try:
         color = mcolors.to_hex(palette.to_rgba(float(value)),keep_alpha=False)
-        print(f'{color} {value}')
+        #print(f'{color} {value}')
     except Exception:
-        print(f'error {value}')
+        #print(f'error {value}')
         return 'white'
     return color
 
@@ -117,20 +120,29 @@ table_hmm =  styles.Table(hmm_table, hmm_header, palette, get_color).make_table(
 
 with open(coverage_heatmap, "rb") as image_file:
     encoded_image = base64.b64encode(image_file.read()).decode()
-    coverage_image = f'<div style="overflow: hidden"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
+    coverage_image = f'<div class="container" style="overflow: hidden"><img alt="Img1" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 99%; border: 2px solid #959494;"/></div>'
     
     
 with open(hmm_heatmap, "rb") as image_file:
     encoded_image = base64.b64encode(image_file.read()).decode()
-    hmm_image = f'<div style="overflow: hidden"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
+    hmm_image = f'<div class="container" style="overflow: hidden"><img alt="Img2" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 99%; border: 2px solid #959494"/></div>'
+
+greatings = header('AliMarko multisample report', level=1)
+
+mapping_intro = header('Mapping Multisample Results', level=2)
+mapping_heatmap = header('Mapping Coverage Width Heatmap', level=3)
+mapping_table = header('Mapping Coverage Width', level=3)
+hmm_intro = header('HMM Multisample Results', level=2)
+hmm_heatmap = header('HMM Score Heatmap', level=3)
+hmm_table = header('HMM Score', level=3)
 
 greatings = f"""
 <p>\n</p>
-<h1> <center>AliMarko multisample report</h1>
+<h2> <center><Mapping to reference database</h2>
+"""
 
-""".format(name=os.path.splitext(os.path.basename(ictv_coverage_file))[0])
 
-out = style.replace('Sample Name', sample_name) + greatings + '<p>\n</p>'  + coverage_image + '<p>\n</p>' + table_html + '<p>\n</p>' + hmm_image + '<p>\n</p>' + table_hmm + '<p>\n</p>' 
+out = style.replace('Sample Name', sample_name) + greatings + mapping_intro  + mapping_heatmap + coverage_image + mapping_table  + table_html + hmm_intro + hmm_heatmap +  hmm_image + hmm_table + table_hmm + '<p>\n</p>' 
 
 with open(output, 'w') as f:
     f.write(out)

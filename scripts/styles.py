@@ -98,6 +98,22 @@ set_style = """
 		tr:hover {
 			background-color: #f5f5f5;
 		}
+        .container {
+        position: relative;
+        display: inline-block;
+        width: 60%;
+        min-width: 700px;
+    }
+    .open-button {
+    position: absolute;
+    top: 3;
+    left: 4;
+    padding: 5px;
+    background: white;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
 	</style>
 </head>
 """
@@ -113,7 +129,7 @@ class Table:
         table_head = f'<div class="tableFixHead"><table align="center"> \n <thead> \n <tr>'
 
         
-        table_head += '\n'.join([f'<th>{c}" </th>' for c in self.header])
+        table_head += '\n'.join([f'<th>{c}</th>' for c in self.header])
         table_head + '</tr></thead>'
 
         return table_head

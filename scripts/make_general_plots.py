@@ -70,14 +70,15 @@ combined_align['max_value'] = combined_align.max(axis=1) + combined_align.mean(a
 combined_align = combined_align.sort_values(by='max_value', ascending=False)
 combined_align.drop(columns='max_value', inplace=True)
 
-combined_align = combined_align.fillna(0)[:200]
+combined_align = combined_align.fillna(0).head(50)
 
 combined_align.to_csv(args.output_coverage_table)
 
-plt.figure(figsize=(14, 9))
-fig = sns.heatmap(combined_align, cmap=sns.color_palette("mako_r", as_cmap=True))
-plt.title('References coverage. General heatmap ')
-plt.subplots_adjust(left=0.35, bottom=0.25)
+plt.figure(figsize=(14, 9), dpi=300)
+fig = sns.heatmap(combined_align, cmap=sns.color_palette("mako_r", as_cmap=True), fmt=".2f")
+fig.set_yticks(np.array(list(range(combined_align.index.shape[0])))+0.5)
+fig.set_yticklabels(list(combined_align.index) , fontsize=5)
+plt.subplots_adjust(left=0.25, bottom=0.25)
 fig.collections[0].colorbar.set_label("Coverage width")
 plt.savefig(args.output_coverage_pic, format='png')
 
@@ -120,10 +121,10 @@ cmap.set_array([min_score, max_score])
 cmap.autoscale()
 
 
-plt.figure(figsize=(16, 11), dpi=250)
+plt.figure(figsize=(16, 11), dpi=300)
 plt.subplots_adjust(left=0.1, bottom=0.25, right=1)
 fig = sns.heatmap(np.log(combined_hmm).fillna(0)[:35], cmap=sns.color_palette("mako_r", as_cmap=True))
-plt.title('HMM general heatmap')
+plt.title('HMM Multisample Heatmap', fontsize=18)
 plt.ylabel('Taxon')
 plt.yticks(fontsize=8)
 fig.collections[0].colorbar.set_label("Sum of normalized score")
