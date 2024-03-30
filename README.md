@@ -59,7 +59,7 @@ mamba install -c conda-forge -c bioconda snakemake
 ```
 
 
-Before run the first time, run
+Before running the first time, run
 
 ```bash
 wget https://genome-idx.s3.amazonaws.com/kraken/16S_Greengenes13.5_20200326.tgz # Download an example Kraken2 database
