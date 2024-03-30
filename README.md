@@ -74,7 +74,7 @@ snakemake -s AliMarko_paired_snakemake.py --use-conda --cores 2 # Run the pipeli
 ```
 
 ## Used databases
-1. We offer a database of reference viral sequences compiled from GANBANK accessions from the [ICTV's Viral Metadata Resourse](https://ictv.global/vmr)
+1. We offer a database of reference viral sequences compiled from GenBank accessions from the [ICTV's Viral Metadata Resourse](https://ictv.global/vmr)
 2. We offer two HMM profiles downloaded from [Viral Minion Database](http://www.bioinfovir.icb.usp.br/minion_db/)
 
 
