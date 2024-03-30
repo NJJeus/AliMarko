@@ -5,7 +5,6 @@ A Pipeline for Virus Sequence Detection
 Requirements:
 * conda
 * snakemake
-* mamba
 * a kraken database
 
 
@@ -49,14 +48,33 @@ The pipeline can process several FASTQ files in parallel due using of Snakemake.
 ## Using
 On current stage, you have to edit input parameters right at the begining of snakemake files
 
-Before run first time, run
+
+Install snakemake with mamba
+
 ```bash
-wget https://genome-idx.s3.amazonaws.com/kraken/16S_Greengenes13.5_20200326.tgz # Downaload an example Kraken2 database
+conda create -n AliMarko
+conda activate AliMarko
+conda install -c conda-forge mamba
+mamba install -c conda-forge -c bioconda snakemake
+```
+
+
+Before run the first time, run
+
+```bash
+wget https://genome-idx.s3.amazonaws.com/kraken/16S_Greengenes13.5_20200326.tgz # Download an example Kraken2 database
 tar -xvf 16S_Greengenes13.5_20200326.tgz # Decompres it
 7z x ictv_virus_reference.fa.7z # Decompress the providen reference viral sequnces
-snakemake -s AliMarko_paired_snakemake.py --use-conda --cores 2 # Run the pipeline
-
 ```
+
+Run the pipeline
+```bash
+snakemake -s AliMarko_paired_snakemake.py --use-conda --cores 2 # Run the pipeline
+```
+
+## Used databases
+1. We offer a database of reference viral sequences compiled from GANBANK accessions from the [ICTV's Viral Metadata Resourse](https://ictv.global/vmr)
+2. We offer two HMM profiles downloaded from [Viral Minion Database](http://www.bioinfovir.icb.usp.br/minion_db/)
 
 
 
