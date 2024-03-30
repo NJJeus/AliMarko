@@ -46,6 +46,19 @@ The pipeline can process several FASTQ files in parallel due using of Snakemake.
 ![Pic_3](Documentation/PIC_3.png)
 *Fig. 3. The file contains heatmaps and scrollable tables for results of analysis of mapping to reference sequences and analysis using HMM*
 
+## Using
+On current stage, you have to edit input parameters right at the begining of snakemake files
+
+Before run first time, run
+```bash
+wget https://genome-idx.s3.amazonaws.com/kraken/16S_Greengenes13.5_20200326.tgz # Downaload an example Kraken2 database
+tar -xvf 16S_Greengenes13.5_20200326.tgz # Decompres it
+7z x ictv_virus_reference.fa.7z # Decompress the providen reference viral sequnces
+snakemake -s AliMarko_paired_snakemake.py --use-conda --cores 2 # Run the pipeline
+
+```
+
+
 
 
 
