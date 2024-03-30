@@ -5,7 +5,7 @@ A Pipeline for Virus Sequence Detection
 
 AliMarko is designed to automate essential analysis steps for viral sequence data processing. It combines read alignment to viral reference genomes and Hidden Markov Models (HMM) with futher phylogenetic analysis (see Fig.1).  
 
-AliMarko recieve FASTQ files and creates an easy-to-read HTML reports. 
+AliMarko recieve FASTQ files and creates easy-to-read HTML reports. 
 
 A sample HTML report contains tabular and graphical representations of alignment to all sequences from a reference database and HMM analysis (see Fig.2)
 
