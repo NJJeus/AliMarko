@@ -7,20 +7,20 @@ import random
 base = "DATA_test/" # A folder where output files is written
 input_folder = "DATA_test/raw_fastq/" # A folder with input fastq files 
 genome_reference = 'ictv_virus_reference.fa' # A fasta file with reference sequnces for alignment
-HMM_folder = 'HMM_folder/' # A folder with HMM for analyzis
+HMM_folder = 'test_HMM/' # A folder with HMM for analyzis
 HMM_info = 'ictv_tables/hmm_info.csv' # A folder with taxonomy information of HMM
+kraken_database = '16S_Greengenes_k2db'
 
-suffix = '.fq.gz'
+suffix = '.fastq.gz' # An ending and extension of FASTQ files. They may be comressed with gz or not
+
+
 
 files, = glob_wildcards(input_folder+"{file}"+ suffix)
 
 want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
 
-print('Files:', end=' ')
-print(files)
-
 rule all:
-    input: f"{base}/htmls/general_html.html",  want_all, f'{base}/phylo/ictv_report.csv'
+    input:  want_all, f'{base}/phylo/ictv_report.csv'#, f"{base}/general_html.html"
     
 rule index_reference:
     input: genome_reference
@@ -40,7 +40,7 @@ rule kraken2:
             kraken2_out = temp(base+"kraken_results/{file}.out"),
             read1=temp(base+'not_classified_fastq/'+"{file}"+'.fastq.gz')
     params: 
-            kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
+            kraken2_db = kraken_database,
             sample = lambda wildcards: wildcards.file
     conda:
         "envs/kraken2.yaml"
@@ -187,6 +187,7 @@ rule hmm_scan:
 rule hmm_report:
     input: 
         read1=f'{base}/hmm_results/{{file}}.csv'
+        
     params:
         reference = HMM_info,
     conda: 'envs/hmm_scan.yaml'
@@ -226,7 +227,7 @@ rule analyse_ictv:
 
 rule ictv_report:
     input: 
-        read1=f'{base}/phylo/ictv_result.csv'
+        read1=f'{base}/phylo/ictv_result.csv',
     params:
         reference = HMM_info,
     conda: 'envs/plot_hmm.yaml'
@@ -310,11 +311,10 @@ rule make_html:
         python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -a {input.hmm_plots} -t {input.trees}
         """           
     
-        
 rule make_general_files:
     input: 
-        coverages = base + 'ictv_coverage/',
-        hmms = base + 'hmm_reports/'
+        coverages = expand(base + 'ictv_coverage/' + '{file}' + '.csv', file=files),
+        hmms = expand(base + 'hmm_reports/' + '{file}' + '.csv', file=files)
     conda: 'envs/plot_hmm.yaml'
     output: 
         hmm_general = f'{base}/hmm_general.csv',
@@ -322,8 +322,8 @@ rule make_general_files:
         hmm_general_pic = f'{base}/hmm_general.png',
         coverage_general_pic = f'{base}/coverage-general.csv'
     shell:
-        """
-        python scripts/make_general_plots.py -i {input.coverages} -m {input.hmms} -p {output.coverage_general_pic} -c {output.coverage_general} -t {output.hmm_general} -u {output.hmm_general_pic}
+        f"""
+        python scripts/make_general_plots.py -i {base}/ictv_coverage/ -m {base}/hmm_reports/ -p {{output.coverage_general_pic}} -c {{output.coverage_general}} -t {{output.hmm_general}} -u {{output.hmm_general_pic}}
 
         """
         
@@ -334,9 +334,9 @@ rule general_html:
         hmm_general_pic = f'{base}/hmm_general.png',
         coverage_general_pic = f'{base}/coverage-general.csv'
     output: 
-        f"{base}/htmls/general_html.html"
+        f"{base}/general_html.html"
     conda: 'envs/plot_hmm.yaml'
     shell:
         """
         python scripts/make_general_html.py -c {input.coverage_general} -e {input.coverage_general_pic} -m {input.hmm_general} -p {input.hmm_general_pic} -o {output} 
-        """
+        """        

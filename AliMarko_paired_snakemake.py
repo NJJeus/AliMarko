@@ -4,13 +4,12 @@ import glob
 import random
 
 
-
-base = "DATA_test/" # A folder where output files is written
+base = "DATA_test2/" # A folder where output files is written
 input_folder = "DATA_test/raw_fastq/" # A folder with input fastq files 
 genome_reference = 'ictv_virus_reference.fa' # A fasta file with reference sequnces for alignment
-HMM_folder = 'HMM_folder/' # A folder with HMM for analyzis
+HMM_folder = 'test_HMM/' # A folder with HMM for analyzis
 HMM_info = 'ictv_tables/hmm_info.csv' # A folder with taxonomy information of HMM
-
+kraken_database = '16S_Greengenes_k2db'
 
 suffix_1 = "_1.fq.gz" # An ending and extension of FASTQ files. They may be comressed with gz or not
 suffix_2 = "_2.fq.gz"
@@ -21,7 +20,7 @@ files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
 
 rule all:
-    input: f"{base}/htmls/general_html.html",  want_all, f'{base}/phylo/ictv_report.csv'
+    input: f"{base}/htmls/general_html.html",  want_all#, f'{base}/phylo/ictv_report.csv'
 
 
 rule index_reference:
@@ -43,7 +42,7 @@ rule kraken2:
             read1=base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
             read2=base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz'
     params: 
-            kraken2_db = "/mnt/disk1/DATABASES/kraken2/pro_and_eu",
+            kraken2_db = kraken_database,
             sample = lambda wildcards: wildcards.file
     priority: 4
     conda:
