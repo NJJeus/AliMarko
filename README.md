@@ -34,11 +34,12 @@ The pipeline can process several FASTQ files in parallel due using of Snakemake.
 ![Common scheme](Documentation/common_scheme.png)
 
 ## Fig. 2. Screenshot of a sample report
-![Pic_3](Documentation/PIC_3.png)
+![Pic_3](Documentation/PIC_2.png)
 *Fig. 2. Screenshots of the one-sample HTML report of AliMarko. A - a screenshot of the html report with visualization of alignment to a virus reference genome (simulated). Information about the reference and general information about alignment is shown in a table. If the reference genome contains several fragments. B - visualization of probably concatenation-caused alignment to a genome of Murine leukemia virus. While one fragment of the reference had good coverage depth, other parts of the genome aren’t covered at all. C- visualization of matches of HMM against a contig. The matches are colored by their score. Several models matched the contig. D - phylogenetic tree of contig of presumable Caliciviridae origin.(see C). Sequences in the tree are colored with their taxonomic group.*
 
 ## Fig. 3. Screenshot of a multisample report
-![Pic_2](Documentation/PIC_2.png)
+![Pic_2](Documentation/PIC_3.png)
+*The file contains heatmaps and scrollable tables for results of analysis of mapping to reference sequences and analysis using HMM*
 
 
 
