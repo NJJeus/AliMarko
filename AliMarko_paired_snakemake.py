@@ -4,20 +4,21 @@ import glob
 import random
 
 
-base = "DATA_test/"
-input_folder = "DATA_test/raw_fastq/"
-genome_reference = 'ictv_virus_reference.fa'
-HMM_folder = '/mnt/disk1/PROJECTS/SURPRISE/VIRALTOOL/DATA/profiles/MINION/wide_pro_eu/'
-HMM_info = 'ictv_tables/hmm_info.csv'
+
+base = "DATA_test/" # A folder where output files is written
+input_folder = "DATA_test/raw_fastq/" # A folder with input fastq files 
+genome_reference = 'ictv_virus_reference.fa' # A fasta file with reference sequnces for alignment
+HMM_folder = 'HMM_folder/' # A folder with HMM for analyzis
+HMM_info = 'ictv_tables/hmm_info.csv' # A folder with taxonomy information of HMM
 
 
-suffix_1 = "_1.fq.gz"
+suffix_1 = "_1.fq.gz" # An ending and extension of FASTQ files. They may be comressed with gz or not
 suffix_2 = "_2.fq.gz"
+
+
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
 want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
-
-#want_all = (expand(f"{base}/phylo/trees_drawings/{{file}}/", file=files))
 
 rule all:
     input: f"{base}/htmls/general_html.html",  want_all, f'{base}/phylo/ictv_report.csv'

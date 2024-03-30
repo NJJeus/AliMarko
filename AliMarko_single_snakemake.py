@@ -4,11 +4,11 @@ import glob
 import random
 
 
-base = "BAT2/"
-input_folder = "/mnt/disk1/RUNS/popov_ns/BAT2_trimmed/"
-genome_reference = 'ictv_virus_reference.fa'
-HMM_folder = '/mnt/disk1/PROJECTS/SURPRISE/VIRALTOOL/DATA/profiles/MINION/wide_pro_eu/'
-HMM_info = 'ictv_tables/hmm_info.csv'
+base = "DATA_test/" # A folder where output files is written
+input_folder = "DATA_test/raw_fastq/" # A folder with input fastq files 
+genome_reference = 'ictv_virus_reference.fa' # A fasta file with reference sequnces for alignment
+HMM_folder = 'HMM_folder/' # A folder with HMM for analyzis
+HMM_info = 'ictv_tables/hmm_info.csv' # A folder with taxonomy information of HMM
 
 suffix = '.fq.gz'
 
