@@ -2,11 +2,6 @@
 # AliMarko (alignment & markov models)
 v0.8  
 A Pipeline for Virus Sequence Detection  
-Requirements:
-* conda
-* snakemake
-* a kraken database
-
 
 AliMarko is designed to automate essential analysis steps for viral sequence data processing. It combines read alignment to viral reference genomes and Hidden Markov Models (HMM) with futher phylogenetic analysis (see Fig.1).  
 
@@ -49,6 +44,11 @@ The pipeline can process several FASTQ files in parallel due using of Snakemake.
 On current stage, you have to edit input parameters right at the begining of snakemake files
 
 
+Requirements:
+* conda
+* snakemake
+* a kraken database
+
 Install snakemake with mamba
 
 ```bash
@@ -59,13 +59,14 @@ mamba install -c conda-forge -c bioconda snakemake
 ```
 
 
-Before running the first time, run
-
+Before running the first time, run. 
 ```bash
 wget https://genome-idx.s3.amazonaws.com/kraken/16S_Greengenes13.5_20200326.tgz # Download an example Kraken2 database
 tar -xvf 16S_Greengenes13.5_20200326.tgz # Decompres it
 7z x ictv_virus_reference.fa.7z # Decompress the providen reference viral sequnces
 ```
+This code initializes all databases for use. The 16S_Greengenes13 Kraken database was downloaded solely for testing the functionality of the pipeline and is not essential for its primary purposes
+
 
 Run the pipeline
 ```bash
