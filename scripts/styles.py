@@ -81,9 +81,9 @@ set_style = """
 		}
 		th, td {
 			text-align: center;
-			padding: 12px;
+			padding: 5px;
             height: 8px;
-            font-size: 8px;
+            font-size: 12px;
 			border-bottom: 1px solid #ddd;
 		}
 		th {

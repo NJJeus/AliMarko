@@ -38,7 +38,7 @@ do
 		-bam $BAMFILE \
 		-out "${DIR}/${species}/${rname}.png"\
 		-pos "${rname}:552-${endpos}" \
-		-ref $REFERENCE \
+		-ref $REFERENCE -width 2000 -height 1000 -read_thickness 10 -read_gap_height 5 -title_fontsize 25 \
 		-bamplot coverage read \
 		-draw coordinates bamplot -no_target_line \
         -title "${BAMNAME}_${species}_${rname}";

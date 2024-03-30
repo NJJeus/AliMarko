@@ -27,6 +27,12 @@ AliMarko creates an easy-to-read HTML report
 
 ![Common scheme](Documentation/common_scheme.png)
 
+## Screenshot of a multisample report
+![Pic_2](Documentation/PIC_2.png)
+
+## Screenshot of a sample report
+![Pic_3](Documentation/PIC_3.png)
+
 
 
 
