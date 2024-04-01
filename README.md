@@ -41,7 +41,7 @@ The pipeline can process several FASTQ files (samples) in parallel due using of 
 ![Pic_3](Documentation/PIC_3.png)
 *Fig. 3. The file contains heatmaps and scrollable tables for results of analysis of mapping to reference sequences and analysis using HMM*
 
-## Using
+## Usage
 On current stage, you have to edit input parameters right at the begining of snakemake files
 
 
