@@ -65,7 +65,7 @@ wget https://genome-idx.s3.amazonaws.com/kraken/16S_Greengenes13.5_20200326.tgz 
 tar -xvf 16S_Greengenes13.5_20200326.tgz # Decompres it
 7z x ictv_virus_reference.fa.7z # Decompress the providen reference viral sequnces
 ```
-This code initializes all databases for use. The 16S_Greengenes13 Kraken database was downloaded solely for testing the functionality of the pipeline and is not essential for its primary purposes
+This code initializes all databases for use. The 16S_Greengenes13 Kraken database was downloaded solely for testing the functionality of the pipeline and doesn't fit its primary purposes
 
 
 Run the pipeline
