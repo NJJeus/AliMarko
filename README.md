@@ -1,5 +1,5 @@
 # AliMarko (Alignment & Markov Models)
-![Common scheme](Documentation/logo-color_git.png)
+![Logo](Documentation/logo_color_git.png)
 
 v0.8  
 
