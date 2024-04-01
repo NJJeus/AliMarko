@@ -1,7 +1,7 @@
 
 # AliMarko (alignment & markov models)
 v0.8  
-A Pipeline for Virus Sequence Detection  
+A Pipeline for studying the representation of viral sequences for scientific purposes.
 
 AliMarko is designed to automate essential analysis steps for viral sequence data processing. It combines read alignment to viral reference genomes and Hidden Markov Models (HMM) with futher phylogenetic analysis (see Fig.1).  
 
