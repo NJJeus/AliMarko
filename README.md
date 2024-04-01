@@ -1,5 +1,5 @@
 # AliMarko (Alignment & Markov Models) <span >v0.8 </span>
-<img src="Documentation/logo_color_git.png" style="border-radius: 20px;">
+<img src="Documentation/logo_color_git.png" style="border-radius: 20 px;">
 
 A Pipeline for studying the representation of viral sequences for scientific purposes.
 
