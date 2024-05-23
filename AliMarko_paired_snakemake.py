@@ -20,7 +20,7 @@ files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
 
 rule all:
-    input: f"{base}/htmls/general_html.html",  want_all#, f'{base}/phylo/ictv_report.csv'
+    input:  want_all, f'{base}/phylo/ictv_report.csv'#, f"{base}/htmls/general_html.html",
 
 
 rule index_reference:
@@ -106,9 +106,13 @@ rule map_extracted_fastq:
         "envs/bwa.yaml"
     shell:
         """
-        bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools view -q 20 -h - | samtools sort -@ {threads} -o {output} - 
+        bwa mem -t {threads} {input.reference} {input.read1} {input.read2} | samtools view -q 20 -h - | samtools sort -@ {threads} -o {output}.tmp - 
+        python scripts/filter_bam.py -i {output}.tmp -o {output}
+        rm {output}.tmp
         samtools index {output}
         """
+        
+
         
 rule calculate_coverage_and_quality:
     input: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
@@ -317,6 +321,8 @@ rule make_html:
         hmm_plots = f'{base}/hmm_plots/{{file}}/',
         trees = directory(f"{base}/phylo/trees_drawings/{{file}}/")
     output: f'{base}/htmls/{{file}}.html'
+    conda:
+        'envs/plot_hmm.yaml'
     priority:
         45
     shell:

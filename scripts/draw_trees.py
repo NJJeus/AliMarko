@@ -71,15 +71,16 @@ for file in files:
     legend_items = list(legend_dict.items())
     patches = [mpatches.Patch(color=color, label=label) for label, color in legend_items]
     
-    fig, axes = plt.subplots(1, 1, figsize=(11.5, 5.94), dpi=140)
+    fig, axes = plt.subplots(1, 1, figsize=(11.5, 5.94), dpi=250)
     # Draw the tree
     axes.legend(handles=patches, bbox_to_anchor=(1, 1), loc='upper left')
     Phylo.draw(tree, axes=axes, label_func=label_func,
                label_colors=labels_dict)
 
     
-    axes.set_title(f"{name}")
-    #axes.set_xlim([-0.1, 2.25])
+    axes.set_title(f"{name}".replace('test_', ''))
+    x_min, x_max = axes.get_xlim()
+    axes.set_xlim([x_min, x_max+(x_max-x_min)*0.3])
     axes.set_ylabel('')
     fig.subplots_adjust(right=0.8, left=0.05)
     fig.savefig(f"{output_folder}/{name}_tree.jpg", format='jpg')

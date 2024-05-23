@@ -3,47 +3,46 @@
 set_style = """
 <head>
 	<title>Sample Name</title>
-	<style>
+	 <style>
         .tableFixHead {
         overflow-y: auto; /* make the table scrollable if height is more than 200 px  */
-        max-height: 800px; /* gives an initial height of 200px to the table */
-        width: 80%;
+        max-height: 500px; /* gives an initial height of 200px to the table */
+        width: 95%;
         margin:auto;
         text-align: center;
                       }
-                      
-        
+
+
         .tableFixHead thead th {
         position: sticky; /* make the table heads sticky */
         top: 0px; /* table head will be placed from the top of the table and sticks to it */
         text-align: center;
-        fontsize: 8
                                 }
-                                
-                                
+
+
         body {
-			background-color: #f1f1f1;
-			font-family: Arial, sans-serif;
-			color: #333;
-			margin: 0;
-			padding: 0;
+                        background-color: #f1f1f1;
+                        font-family: Arial, sans-serif;
+                        color: #333;
+                        margin: 0;
+                        padding: 0;
             text-align: center;
-		}
-		header {
-			background-color: #2ecc71;
-			color: #000;
-			padding: 240px;
+                }
+                header {
+                        background-color: #2ecc71;
+                        color: #000;
+                        padding: 100px;
             text-align: center;
-		}
-		h1 {
-			font-size: 36px;
-			margin-top: 0;
+                }
+                h1 {
+                        font-size: 36px;
+                        margin-top: 0;
             color: #454444;
             text-align: center;
-		}
+                }
         h2 {
-			font-size: 28px;
-			margin-top: 0;
+                        font-size: 28px;
+                        margin-top: 0;
             color: #454444;
             text-align: center;
         }
@@ -52,69 +51,65 @@ set_style = """
         margin-top: 0;
         color: #454444;
         text-align: center;
-		}
-		main {
-			max-width: 1000px;
-			margin: 0 auto;
-			padding: 20px;
+                }
+                main {
+                        max-width: 800px;
+                        margin: 0 auto;
+                        padding: 10px;
             text-align: center;
-		}
-		p {
-			line-height: 1.5;
-			margin-bottom: 20px;
-		}
-		a {
-			color: #2ecc71;
-			text-decoration: none;
-		}
-		a:hover {
-			text-decoration: underline;
-		}
-		table {
-			border-collapse: collapse;
-			width: 100%;
-			margin-bottom: 20px;
-			background-color: #fff;
+                }
+                p {
+                        line-height: 1.5;
+                        margin-bottom: 20px;
+                }
+                a {
+                        color: #2ecc71;
+                        text-decoration: none;
+                }
+                a:hover {
+                        text-decoration: underline;
+                }
+                img {
+                        width:95%;
+                        border-radius:3px;
+
+                }
+                table {
+                        width: 800px;
+                        margin-bottom: 20px;
+                        border-radius:4px;
+
             font-size: 12px;
-			box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+                        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
-		}
-		th, td {
-			text-align: center;
-			padding: 5px;
-            height: 8px;
-            font-size: 12px;
-			border-bottom: 1px solid #ddd;
-		}
-		th {
-			background-color: #18aa9d;
-			color: #fff;
-			font-weight: bold;
-            font-size: 12px;
-            
-            
-			text-transform: uppercase;
-		}
-		tr:hover {
-			background-color: #f5f5f5;
-		}
-        .container {
-        position: relative;
-        display: inline-block;
-        width: 60%;
-        min-width: 700px;
-    }
-    .open-button {
-    position: absolute;
-    top: 3;
-    left: 4;
-    padding: 5px;
-    background: white;
-    cursor: pointer;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-}
-	</style>
+                }
+                th, td {
+                        text-align: center;
+                        padding: 2px;
+            height: 4px;
+            font-size: 17px;
+                        border-bottom: 1px solid #ddd;
+                }
+                td {
+                        background-color: #fff;
+
+                }
+                th {
+                        background-color: #18aa9d;
+                        color: #fff;
+                        font-weight: bold;
+                        border-radius:3px;
+
+            font-size: 18px;
+
+
+                }
+
+                tr:hover {
+                        background-color: #f5f5f5;
+                }
+        </style>
+
 </head>
 """
 

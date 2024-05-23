@@ -27,7 +27,7 @@ for file in "$input_folder"/*; do
 
         # Perform some operation on the input file and write the result to the output file
         # For demonstration purpose, let's just copy the input file to the output folder
-        python scripts/select_msa.py -i $file -o $file.temp.fasta -n 15
+        python scripts/select_msa.py -i $file -o $file.temp.fasta -n 40
         mafft $file.temp.fasta  > $output_file
  
         echo "Processed: $filename"

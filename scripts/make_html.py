@@ -7,6 +7,7 @@ import styles
 import numpy as np
 import glob
 import argparse
+import matplotlib
 
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
