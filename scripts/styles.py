@@ -108,6 +108,45 @@ set_style = """
                 tr:hover {
                         background-color: #f5f5f5;
                 }
+                td.tooltip {
+            position: relative;
+        }
+
+        td.tooltip:hover::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 6px;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            z-index: 1;
+        }
+        h3.tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        span.tooltip-text {
+            display: none;
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 6px;
+            top: -30px;
+            left: 100%;
+            z-index: 999;
+            transform: translateX(-50%);
+        }
+
+        h3.tooltip:hover span.tooltip-text {
+            display: block;
+        }
+        
         </style>
 
 </head>
@@ -129,12 +168,20 @@ class Table:
 
         return table_head
 
+    def make_td(self, x):
+        if "CONTAMINATION_INFO:" in str(x):
+            x, cont = x.split('CONTAMINATION_INFO:')
+            
+            return f'<td class="tooltip" data-tooltip="{cont}" style="background-color: #FFC5C5; width=10; heigh=5">{x}</td>'
+        else:
+            return f'<td style="background-color: {self.get_color(self.pallete, x)}; width=10; heigh=5">{x}</td>'
+    
     
     def table_body(self):
 
         body = '<tbody> \n '
         for line in self.virus_array:
-            table_line = '<tr>' + ''.join([f'<td style="background-color: {self.get_color(self.pallete, i)}; width=10; heigh=5">{i}</td>' for i in line]) + '</tr>'
+            table_line = '<tr>' + ''.join([self.make_td(i) for i in line]) + '</tr>'
             body += table_line
         body += '</tbody> \n </table></div>'
         return body

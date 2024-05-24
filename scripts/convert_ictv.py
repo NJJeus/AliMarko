@@ -108,7 +108,7 @@ agg_all_columns_dict.update({i:lambda x: [round(c, 4) for c in list(x)] for i in
 agg_all_columns_dict.update({'tmp_rname': lambda x: list(x)})
 agg_all_columns_dict.update({i:'first' for i in ['rname', 'Realm', 'Kingdom',
        'Subkingdom', 'Phylum', 'Subphylum', 'Class', 'Order', 'Family', 'Genus', 'Species', 'Virus isolate designation',
-              'Virus name(s)', 'Virus GENBANK accession', 'Host source', 'genbank_list']})
+              'Virus name(s)', 'Virus GENBANK accession', 'Host source', 'genbank_list', 'Feature']})
 
 data = data.groupby('Isolate_id').agg(agg_all_columns_dict)
 
@@ -137,7 +137,7 @@ tmp_pic_data.to_csv(tmp_output, header=False)
 # Clean and output
 data = data[['Virus name(s)', 'Host source', 'len', 'deep_sites', 'coverage', 'meandepth',  'meanmapq', 'snps', 'nucleotide_similarity',
              *[f'fragments_{c}' for c in per_fragment_columns], 'Virus GENBANK accession', 'Realm', 'Kingdom', 'Subkingdom', 'Phylum', 'Subphylum', 'Class',
-   'Order', 'Family', 'Genus', 'Species']]
+   'Order', 'Family', 'Genus', 'Species', 'Feature']]
 
 print(output_file)
 

@@ -104,10 +104,13 @@ def get_color(palette, value):
         return 'white'
     return color
 
-
+ictv_coverage['Virus name(s)'] = ictv_coverage['Virus name(s)'] + ictv_coverage['Feature'].fillna('')
 
 introduction_frame = ictv_coverage[['Virus name(s)', 'Host source',
                'coverage', 'meandepth', 'Genus', 'Family', 'Realm']].query('coverage != 0')
+
+
+
 introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
 introduction_table = introduction_frame.to_numpy()
 
@@ -140,7 +143,12 @@ host_dict = {}
 for host, row in ictv_drawings.iterrows():
     viruses = {}
     for virus_loc in range(len(row.Isolate_id)):
-        virus_name = row.Isolate_id[virus_loc]
+        virus_name = row['Virus name(s)'][virus_loc]
+        if 'CONTAMINATION_INFO:' in virus_name:
+            virus_name = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]} <span class="tooltip-text">{virus_name.split("CONTAMINATION_INFO:")[1]}</span></h3>'
+        else:
+            virus_name = f'<h3>{virus_name}<\h3>'
+        
         virus_list = np.array([row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], 
                                row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]]).T
 
@@ -156,7 +164,7 @@ for host, row in ictv_drawings.iterrows():
                 images.append(f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>')
         images = '\n'.join(images)
 
-        viruses.update({f'<h3>{virus_name}</h3>':styles.Table(virus_list, ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ',' SNP Count'], palette, get_color).make_table() + images})
+        viruses.update({f'{virus_name}':styles.Table(virus_list, ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ',' SNP Count'], palette, get_color).make_table() + images})
 
     host_dict.update({f'<h2>{host}</h2>':styles.Details(viruses).make_details()})
 

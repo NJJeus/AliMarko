@@ -4,7 +4,7 @@ import glob
 import random
 
 
-base = "DATA_test2/" # A folder where output files is written
+base = "DATA_test3/" # A folder where output files is written
 input_folder = "DATA_test/raw_fastq/" # A folder with input fastq files 
 genome_reference = 'ictv_virus_reference.fa' # A fasta file with reference sequnces for alignment
 HMM_folder = 'test_HMM/' # A folder with HMM for analyzis
