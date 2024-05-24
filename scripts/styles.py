@@ -46,6 +46,9 @@ set_style = """
             color: #454444;
             text-align: center;
         }
+        th{
+            z-index:1000;
+        }
         h3 {
         font-size: 18px;
         margin-top: 0;
@@ -123,7 +126,7 @@ set_style = """
             left: 50%;
             transform: translateX(-50%);
             white-space: nowrap;
-            z-index: 1;
+            z-index: 1001;
         }
         h3.tooltip {
             position: relative;
@@ -139,7 +142,9 @@ set_style = """
             border-radius: 6px;
             top: -30px;
             left: 100%;
-            z-index: 999;
+            align:left;
+            z-index: 1011;
+            
             transform: translateX(-50%);
         }
 

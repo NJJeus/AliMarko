@@ -104,14 +104,22 @@ def get_color(palette, value):
         return 'white'
     return color
 
-ictv_coverage['Virus name(s)'] = ictv_coverage['Virus name(s)'] + ictv_coverage['Feature'].fillna('')
+def add_string(x, string_to_add):
+    if pd.notna(x):
+        return  string_to_add + "Sequences of this virus have association with " + str(x) + "." 
+    else:
+        return x
 
-introduction_frame = ictv_coverage[['Virus name(s)', 'Host source',
+
+ictv_coverage['Feature'] = ictv_coverage['Feature'].apply(add_string, string_to_add='CONTAMINATION_INFO:')
+ictv_coverage['Isolate_id'] = ictv_coverage['Isolate_id'] + ictv_coverage['Feature'].fillna('')
+
+introduction_frame = ictv_coverage[['Isolate_id', 'Host source',
                'coverage', 'meandepth', 'Genus', 'Family', 'Realm']].query('coverage != 0')
 
 
 
-introduction_header = ['Virus name(s)', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
+introduction_header = ['Isolate_id', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
 introduction_table = introduction_frame.to_numpy()
 
 
@@ -143,11 +151,13 @@ host_dict = {}
 for host, row in ictv_drawings.iterrows():
     viruses = {}
     for virus_loc in range(len(row.Isolate_id)):
-        virus_name = row['Virus name(s)'][virus_loc]
+        virus_name = row['Isolate_id'][virus_loc]
         if 'CONTAMINATION_INFO:' in virus_name:
+            virus_tech_name = virus_name.split("CONTAMINATION_INFO:")[0]
             virus_name = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]} <span class="tooltip-text">{virus_name.split("CONTAMINATION_INFO:")[1]}</span></h3>'
         else:
-            virus_name = f'<h3>{virus_name}<\h3>'
+            virus_tech_name = virus_name
+            virus_name = f'<h3>{virus_name}</h3>'
         
         virus_list = np.array([row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], 
                                row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]]).T
@@ -156,7 +166,7 @@ for host, row in ictv_drawings.iterrows():
         images = []
         for i in row.genbank_list[virus_loc]:
             try:
-                picture_path = glob.glob(f"{coverage_draw_folder_path}/{virus_name}/*{i}*")[0]
+                picture_path = glob.glob(f"{coverage_draw_folder_path}/{virus_tech_name}/*{i}*")[0]
             except Exception:
                 continue
             with open(picture_path, "rb") as image_file:
