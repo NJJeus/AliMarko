@@ -80,7 +80,7 @@ for file in files:
     
     axes.set_title(f"{name}".replace('test_', ''))
     x_min, x_max = axes.get_xlim()
-    axes.set_xlim([x_min, x_max+(x_max-x_min)*0.3])
+    axes.set_xlim([x_min, x_max+(x_max-x_min)*0.5])
     axes.set_ylabel('')
     fig.subplots_adjust(right=0.8, left=0.05)
     fig.savefig(f"{output_folder}/{name}_tree.jpg", format='jpg')

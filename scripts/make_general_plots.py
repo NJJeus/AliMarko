@@ -29,6 +29,12 @@ def if_condition(x, message):
         print(message)
         exit()
 
+def add_string(x, string_to_add):
+    if pd.notna(x):
+        return  string_to_add + "Sequences of this virus have association with " + str(x) + "." 
+    else:
+        return x
+
 args = parser.parse_args()
 print('hete')
 
@@ -62,7 +68,13 @@ for file in csv_files:
 
 combined_align = pd.concat(dfs, ignore_index=True)
 
+combined_align['Feature'] = combined_align['Feature'].apply(add_string, string_to_add='CONTAMINATION_INFO:')
+combined_align['Isolate_id'] = combined_align['Isolate_id'] + combined_align['Feature'].fillna('')
+combined_align['Isolate_id'] = combined_align['Isolate_id'].str.replace('{', '[').str.replace('}', ']')
+
 combined_align = combined_align.sort_values('coverage', ascending=False)[['Isolate_id', 'coverage', 'Sample']]
+
+
 
 combined_align = combined_align.pivot(index='Isolate_id', columns='Sample', values='coverage')
 
