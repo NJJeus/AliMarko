@@ -82,23 +82,30 @@ combined_align['max_value'] = combined_align.max(axis=1) + combined_align.mean(a
 combined_align = combined_align.sort_values(by='max_value', ascending=False)
 combined_align.drop(columns='max_value', inplace=True)
 
-cols = [col for col in combined_align.columns if not (col.endswith('_') and 'MERGED' not in col)]
 
-combined_align = combined_align[cols].fillna(0).head(25)
+combined_align = combined_align.fillna(0).head(25)
 
 combined_align.to_csv(args.output_coverage_table)
+
+red_indexes = combined_align.reset_index()[combined_align.index.str.contains('CONTAMINATION_INFO:')].index
+combined_align.index = pd.Series(combined_align.index).apply(lambda x: x.split('CONTAMINATION_INFO:')[0])
+
 
 plt.figure(figsize=(17, 11), dpi=300)
 fig = sns.heatmap(combined_align, cmap=sns.color_palette("mako_r", as_cmap=True), fmt=".2f")
 fig.set_yticks(np.array(list(range(combined_align.index.shape[0])))+0.5)
 fig.set_yticklabels(list(combined_align.index) , fontsize=14)
 plt.xticks(fontsize=14, rotation = 45, ha='right')
-plt.xlabel('\n Образцы', fontsize=18)
-plt.ylabel('Таксоны', fontsize=18)
+plt.xlabel('\n Sample', fontsize=18)
+plt.ylabel('Taxon', fontsize=18)
 plt.subplots_adjust(bottom=0.25, right=1.01, left=0.4, top=0.92)
-plt.title('Общий отчёт модуля картирования для всех образцов 2015 года \n', fontsize=24)
+plt.title('Coverage Width Multisample Heatmap', fontsize=24)
 
-fig.collections[0].colorbar.set_label("\n Ширина покрытия", fontsize=14)
+y_labels = plt.gca().get_yticklabels()
+for index in red_indexes:
+    y_labels[index].set_color('#C80000')
+
+fig.collections[0].colorbar.set_label("\n Coverage Width", fontsize=14)
 plt.savefig(args.output_coverage_pic, format='png')
 
 # HMM part
@@ -146,12 +153,12 @@ cmap.autoscale()
 plt.figure(figsize=(17, 11), dpi=300)
 plt.subplots_adjust(left=0.2, bottom=0.22, right=1.01, top=0.95)
 fig = sns.heatmap(np.log(combined_hmm).fillna(0)[:35], cmap=sns.color_palette("mako_r", as_cmap=True))
-plt.title('Общий отчёт модуля  HMM для всех образцов 2015 года', fontsize=18)
-plt.xlabel('\n Образцы', fontsize=18)
-plt.ylabel('Таксоны \n', fontsize=18)
+plt.title('HMM Multisample Heatmap', fontsize=18)
+plt.xlabel('\n Sample', fontsize=18)
+plt.ylabel('Taxon \n', fontsize=18)
 plt.yticks(fontsize=15)
 plt.xticks(fontsize=13, rotation = 45, ha='right')
-fig.collections[0].colorbar.set_label("\n Сумма нормализованных баллов", fontsize=14)
+fig.collections[0].colorbar.set_label("\n Sum of normalized scores", fontsize=14)
 
 plt.savefig(args.output_hmm_pic, format='png')
 
