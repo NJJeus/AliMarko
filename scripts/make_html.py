@@ -232,13 +232,13 @@ greatings = f"""
 
 table_html =  styles.Table(introduction_table, introduction_header, palette, get_color).make_table()
 
-hmm_greetings = f"<p>\n</p><h2> <center> HMM results </h2><p>\n</p>"
+hmm_greetings = f"<p>\n</p><h2> <center> General HMM Results </h2><p>\n</p>"
 
 table_hmm = styles.Table(hmm_table, hmm_header, palette, get_color).make_table()
 
 details = styles.Details(host_dict).make_details()
 
-out = style.replace('Sample Name', sample_name) + greatings + table_html + hmm_greetings +  table_hmm + details + images_hmm + '<p>\n</p>'
+out = style.replace('Sample Name', sample_name) + greatings + "<h2>Mapping General Results</h2>" + table_html + hmm_greetings +  table_hmm + "<h2>Mapping Details </h2>" + details + "<h2>HMM Details </h2>" + images_hmm + '<p>\n</p>'
 
 with open(output, 'w') as f:
     f.write(out)
