@@ -11,8 +11,8 @@ HMM_folder = 'test_HMM/' # A folder with HMM for analyzis
 HMM_info = 'ictv_tables/hmm_info.csv' # A folder with taxonomy information of HMM
 kraken_database = '16S_Greengenes_k2db'
 
-suffix_1 = "_1.fq.gz" # An ending and extension of FASTQ files. They may be comressed with gz or not
-suffix_2 = "_2.fq.gz"
+suffix_1 = "1.fq" # An ending and extension of FASTQ files. They may be comressed with gz or not
+suffix_2 = "2.fq"
 
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)

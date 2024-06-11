@@ -43,10 +43,8 @@ files = glob.glob(f'{input_folder}/*.treefile')
 
 for file in files:
     name = file.split('/')[-1].replace('_tree.treefile', '')
-    try:
-        tree = Phylo.read(file, "newick")
-    except Exception:
-        continue
+    print(name)
+    tree = Phylo.read(file, "newick")
     for leaf in tree.get_nonterminals():
         print(leaf.name)
         
@@ -55,7 +53,7 @@ for file in files:
     fams = {}
     # Print the names of the leaf nodes
     for leaf in leaf_nodes:
-        fams[leaf.name] = leaf.name.split('|')[-1]
+        fams[leaf.name] = leaf.name.split('|')[-1].split('#')[0]
     palete_set = set(fams.values())
     legend_dict = {}
     palette = sns.color_palette("husl", n_colors=len(palete_set))

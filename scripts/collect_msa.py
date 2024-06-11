@@ -2,7 +2,7 @@
     
 import pandas as pd
 from Bio import SeqIO
-from Bio import SeqIO
+from Bio import SeqRecord
 from Bio.SeqIO import SeqRecord
 import subprocess
 import argparse
@@ -161,12 +161,12 @@ for name_c_contig in contigs_names:
 
     for cur_hmm in hmms[:3]:
 
-        ictv_names = ictv.query(f'Query == "{cur_hmm}"')[['Name', 'From', 'To', 'Frame']].drop_duplicates(subset='Name').set_index('Name').to_dict(orient='index')
+        ictv_names = ictv.query(f'Query == "{cur_hmm}"')[['Name', 'From', 'To', 'Frame']].reset_index()
 
-        from Bio import SeqIO
+
         genome_seqs = []
 
-        # Open the FASTA file and parse its contents
+        # Open the FASTA file and parse its content
         with open(reference_fasta, "r") as file:
             sequences = SeqIO.parse(file, "fasta")
             i=0
@@ -174,20 +174,29 @@ for name_c_contig in contigs_names:
             # Iterate over each sequence in the FASTA file
             for sequence in sequences:
                 seq_id = sequence.id.split('|')[1]
-                if seq_id not in ictv_names.keys():
-                    continue
-                From, To, Frame = ictv_names[seq_id]['From'], ictv_names[seq_id]['To'], ictv_names[seq_id]['Frame']
-                if From > To:
-                    To, From = From, To
-                shift_dict = {1:0, 2:1, 3:2, 4:0, 5:1, 6:2}
-                shift = shift_dict[Frame]
-                if Frame in [1, 2, 3]:
-                     sequence.seq = sequence.seq[From+shift:To].translate()
-                else:
-                    sequence.seq = sequence.seq[From:To].reverse_complement()[shift:].translate()
-                sequence.id = str(taxo_index[seq_id]['ictv_taxo_index']).replace(' ', '_'.replace("|", "__"))
+                
+                ictv_matches = [ictv_match for i, ictv_match in ictv_names.iterrows() if str(ictv_match['Name']) == seq_id]
+                match_count=0
+                for ictv_match in ictv_matches:
+                    
+                    From, To, Frame = ictv_match['From'], ictv_match['To'], ictv_match['Frame']
+                    if From > To:
+                        To, From = From, To
+                    shift_dict = {1:0, 2:1, 3:2, 4:0, 5:1, 6:2}
+                    shift = shift_dict[Frame]
+                    try:
+                        if Frame in [1, 2, 3]:
+                             translated_seq = sequence.seq[From+shift:To].translate()
+                        else:
+                            translated_seq = sequence.seq[From:To+1].reverse_complement()[shift:].translate()
+                    except Exception:
+                        print(translated_seq[From+shift:To])
+                        os._exit(1)
+                        
+                    output_seq = SeqRecord(translated_seq, id=str(taxo_index[seq_id]['ictv_taxo_index']).replace(' ', '_')+f"#{match_count}")
 
-                genome_seqs.append(sequence)
+                    genome_seqs.append(output_seq)
+                    match_count+=1
 
         
         contig_seqs = []
