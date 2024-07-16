@@ -49,6 +49,16 @@ set_style = """
         th{
             z-index:1000;
         }
+ hr {
+  width: 800px;
+  height: 4px;
+  background-color: #BBB; 
+  border-radius: 5px; /* smooth ends */
+  border: none; /* remove default border */
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); /* add a subtle shadow */
+}
+
+
         h3 {
         font-size: 18px;
         margin-top: 0;

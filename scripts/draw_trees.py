@@ -14,6 +14,15 @@ def if_condition(x, message):
 def label_func(x):
     return str(x)[:30]
 
+def round_bootstrap(clade):
+    if clade.confidence:
+         clade.confidence = int(clade.confidence * 10) / 10
+    for child in clade.clades:
+        round_bootstrap(child)
+        
+def bootstrap_colors(bootstrap):
+    return f"hsl({bootstrap}, 100%, 50%)"
+
 description = """A script"""
 
 parser = argparse.ArgumentParser(description=description)
@@ -44,20 +53,24 @@ files = glob.glob(f'{input_folder}/*.treefile')
 for file in files:
     name = file.split('/')[-1].replace('_tree.treefile', '')
     print(name)
-    tree = Phylo.read(file, "newick")
-    for leaf in tree.get_nonterminals():
-        print(leaf.name)
+    try:
+        tree = Phylo.read(file, "newick")
+    except Exception:
+        print(f"Trere is no tree in treefile {file}")
+        continue
         
     tree.root_at_midpoint()
+    round_bootstrap(tree.root)
     leaf_nodes = tree.get_terminals()
     fams = {}
     # Print the names of the leaf nodes
     for leaf in leaf_nodes:
         fams[leaf.name] = leaf.name.split('|')[-1].split('#')[0]
+        if "NODE" in leaf.name:
+            fams[leaf.name] = "_".join(leaf.name.split('_')[:2])
     palete_set = set(fams.values())
     legend_dict = {}
     palette = sns.color_palette("husl", n_colors=len(palete_set))
-    print(palette)
     c=0
     for i in palete_set:
         legend_dict[i] = [i*0.9 for i in palette[c]]
@@ -76,9 +89,12 @@ for file in files:
                label_colors=labels_dict)
 
     
-    axes.set_title(f"{name}".replace('test_', ''))
+    axes.set_title(f"Phylogeny of {name.split('__')[1]}-Matched AA Sequences from {name.split('__')[0].replace('test_', '')} contig")
     x_min, x_max = axes.get_xlim()
     axes.set_xlim([x_min, x_max+(x_max-x_min)*0.5])
     axes.set_ylabel('')
+    axes.set_xlabel('Branch Length')
+    axes.set_yticklabels([])
+    axes.tick_params(axis='y', which='both', length=0)
     fig.subplots_adjust(right=0.8, left=0.05)
     fig.savefig(f"{output_folder}/{name}_tree.jpg", format='jpg')

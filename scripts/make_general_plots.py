@@ -84,6 +84,7 @@ combined_align.drop(columns='max_value', inplace=True)
 
 
 combined_align = combined_align.fillna(0).head(25)
+combined_align.index = pd.Series(combined_align.index).apply(lambda x: x.split('[')[0])
 
 combined_align.to_csv(args.output_coverage_table)
 

@@ -92,8 +92,11 @@ for contig in data.Name.unique():
     plt.clf()
     fig = plt.figure(dpi=400, figsize=(8, 4.5))
     ax = fig.add_subplot(1,1,1)
+    
+
     contig_data = data.query(f'Name == "{contig}"').head(4)
     length_contig = contig_data.Length_contig.max()
+    ax.text(length_contig/2, 1, f"HMM hits to {contig}", ha='center')
     ax.set_xlim([0, length_contig])
     max_score = contig_data.Score.max()
     min_score = contig_data.Score.min()
@@ -114,22 +117,15 @@ for contig in data.Name.unique():
         width=0.2, head_width=0.4, length_includes_head=True, 
                  head_length=max(abs(row.To-row.From)/10, length_contig/100))
         arrowtext = f'{row.Query}:{row["Positive terms"]}, {row.Taxon}'
-        #text_obj = ax.text((row.From + row.To)/2, i+1, arrowtext, fontdict={'size':6}, ha='center')
         correct_position(ax, (row.From + row.To)/2, i+1, arrowtext, 9, 0)
-
-        
         
 
     ax.set_yticks([])
     cbar = plt.colorbar(cmap, orientation='vertical', ticks=np.linspace(min_score, max_score, num=5), ax=ax)
     cbar.set_label('Score')
         
-
     
     ax.plot([0, length_contig], [0, 0],linewidth=4.0)
-    ax.text(length_contig/2, 1, contig, ha='center')
-    
-    
     ax.set_ylim([i-2, 0.2])
     plt.savefig(f'{output_dir}/{contig}.svg')
     plt.close()

@@ -124,9 +124,10 @@ introduction_table = introduction_frame.to_numpy()
 
 
 hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
-hmm_frame[['Score', 'Threshold', 'Score_ratio']] = hmm_frame[['Score', 'Threshold', 'Score_ratio']].round(3)
-hmm_header = hmm_frame.columns
-hmm_table = hmm_frame.to_numpy()
+hmm_frame[['Score', 'Threshold', 'Score_ratio']] = hmm_frame[['Score', 'Threshold', 'Score_ratio']].astype('int')
+hmm_frame = hmm_frame.rename(columns={'Positive terms': 'Putative Protein', 'Query': 'HMM'})
+hmm_header = hmm_frame.drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1).columns
+hmm_table = hmm_frame.drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1).to_numpy()
 
 
 
@@ -175,15 +176,15 @@ for host, row in ictv_drawings.iterrows():
 
         viruses.update({f'{virus_name}':styles.Table(virus_list, ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ',' SNP Count'], palette, get_color).make_table() + images})
 
-    host_dict.update({f'<h2>{host}</h2>':styles.Details(viruses).make_details()})
+    host_dict.update({f'<h2>Host: {host}</h2>':styles.Details(viruses).make_details()})
 
 
-order = [f'<h2>{host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
+order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
 order = list(set(order + [f'<h2>{i}</h2>' for i in host_dict.keys()]))
 def key_func(x):
     return order.index(x)
 host_dict = sorted(host_dict.items(), key=lambda x: key_func(x[0]))
-host_dict = {key:value for key, value in host_dict}
+host_dict = {f"{key}":value for key, value in host_dict}
 
 
 positive_contigs = hmm_frame.query('Score_ratio > 2').groupby('Name').count().query('Score > 0').reset_index().Name
@@ -194,7 +195,8 @@ contigs_dict = {}
 images_hmm = []
 table_contigs = []
 for contig in list_of_contigs:
-    table_contig = hmm_frame.query(f'Name == "{contig}"')
+    
+    table_contig = hmm_frame.query(f'Name == "{contig}"').drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1)
     models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
     models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
     
@@ -208,13 +210,16 @@ for contig in list_of_contigs:
         print(tree)
         with open(tree, "rb") as tree_image_file:
             tree_encoded_image= base64.b64encode(tree_image_file.read()).decode()
-            html_tree = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{tree_encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
-            trees_pictures = trees_pictures + '\n' + html_tree       
+            tree_HMM = tree.split('__')[1]
+            protein_HMM = table_contig.query(f'HMM == "{tree_HMM}"')['Putative Protein'].unique()[0]
+            tree_name = f"<h3>Phylogenetic Tree of {tree_HMM}-Matched Amino Acid Sequences</h3><h3>Putative protein: {protein_HMM}</h3>"
+            html_tree = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{tree_encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
+            trees_pictures = trees_pictures + '\n' + tree_name + html_tree       
         
         
     with open(picture_path, "rb") as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode()
-        html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
+        html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
         details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns, palette, get_color).make_table()+'\n'+ html_image + '\n' + trees_pictures}).make_details()
         images_hmm.append(details_image)
 images_hmm = '\n'.join(images_hmm)
@@ -226,19 +231,19 @@ style = styles.set_style
 
 greatings = f"""
 <p>\n</p>
-<h1> <center> {sample_name} </h1>
+<h1> <center>Sample: {sample_name} </h1>
 
 """.format(name=os.path.splitext(os.path.basename(ictv_coverage_file))[0])
 
 table_html =  styles.Table(introduction_table, introduction_header, palette, get_color).make_table()
 
-hmm_greetings = f"<p>\n</p><h2> <center> General HMM Results </h2><p>\n</p>"
+hmm_greetings = f"<p>\n</p><h2> <center> HMM Hit Summary </h2><p>\n</p>"
 
 table_hmm = styles.Table(hmm_table, hmm_header, palette, get_color).make_table()
 
 details = styles.Details(host_dict).make_details()
 
-out = style.replace('Sample Name', sample_name) + greatings + "<h2>Mapping General Results</h2>" + table_html + hmm_greetings +  table_hmm + "<h2>Mapping Details </h2>" + details + "<h2>HMM Details </h2>" + images_hmm + '<p>\n</p>'
+out = style.replace('Sample Name', sample_name) + greatings + "<h2>Mapping Summary</h2>" + table_html + hmm_greetings +   table_hmm + '<p>\n</p><hr>' + "<h2>Mapping Details</h2>" + details + '<p>\n</p><p>\n</p><hr>' + "<h2>HMM Module Results by Contig</h2>" + images_hmm + '<p>\n</p>'
 
 with open(output, 'w') as f:
     f.write(out)
