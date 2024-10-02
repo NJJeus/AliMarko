@@ -5,13 +5,18 @@ import seaborn as sns
 import glob
 import argparse
 import os
+import re
 
 
 def if_condition(x, message):
     if not x:
         print(message)
         exit()
+        
+    
+    
 def label_func(x):
+    x = re.sub(r'{[^{}]*}', '', str(x)).split('#')[0]
     return str(x)[:30]
 
 def round_bootstrap(clade):
@@ -78,7 +83,7 @@ for file in files:
             legend_dict[i] = (0.8901960784313725, 0.10196078431372549, 0.10980392156862745)
         
         c+=1
-    labels_dict = {k[:30]:legend_dict[v] for k, v in fams.items()}
+    labels_dict = {label_func(k):legend_dict[v] for k, v in fams.items()}
     legend_items = list(legend_dict.items())
     patches = [mpatches.Patch(color=color, label=label) for label, color in legend_items]
     
