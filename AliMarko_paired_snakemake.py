@@ -4,23 +4,25 @@ import glob
 import random
 
 
-base = "DATA_test3/" # A folder where output files is written
+
+basedir = "DATA_test3/" # A folder where output files is written
+base = basedir
 input_folder = "DATA_test/raw_fastq/" # A folder with input fastq files 
 genome_reference = 'ictv_virus_reference.fa' # A fasta file with reference sequnces for alignment
 HMM_folder = 'test_HMM/' # A folder with HMM for analyzis
 HMM_info = 'ictv_tables/hmm_info.csv' # A folder with taxonomy information of HMM
 kraken_database = '16S_Greengenes_k2db'
 
-suffix_1 = "1.fq" # An ending and extension of FASTQ files. They may be comressed with gz or not
-suffix_2 = "2.fq"
+suffix_1 = "_1.fq" # An ending and extension of FASTQ files. They may be comressed with gz or not
+suffix_2 = "_2.fq"
 
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
-want_all = (expand(f'{base}/htmls/{{file}}.html', file=files))
+want_all = (expand(basedir + 'htmls/{file}.html', file=files))
 
 rule all:
-    input:  want_all, f'{base}/phylo/ictv_report.csv'#, f"{base}/htmls/general_html.html",
+    input:  want_all, basedir + 'phylo/ictv_report.csv'#, f"{basedir}/htmls/general_html.html",
 
 
 rule index_reference:
@@ -36,12 +38,12 @@ rule index_reference:
 
         
 rule kraken2:
-    input: read1 = input_folder+"{file}"+suffix_1,
-            read2 = input_folder+"{file}"+suffix_2
-    output: kraken2_report = base+"kraken_results/{file}.report",
-            kraken2_out = base+"kraken_results/{file}.out",
-            read1 = base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
-            read2 = base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz'
+    input: read1 = input_folder + "{file}" + suffix_1,
+            read2 = input_folder + "{file}" + suffix_2
+    output: kraken2_report = basedir + "kraken_results/{file}.report",
+            kraken2_out = basedir + "kraken_results/{file}.out",
+            read1 = basedir + 'not_classified_fastq/{file}_1.fastq.gz',
+            read2 = basedir + 'not_classified_fastq/{file}_2.fastq.gz'
     params: 
             kraken2_db = kraken_database,
             sample = lambda wildcards: wildcards.file
@@ -51,6 +53,7 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
+        echo "{base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp"
         kraken2 --threads {{threads}} --confidence 0.7 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
         gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
@@ -59,10 +62,10 @@ rule kraken2:
 
 rule spades:
     input:
-        read1 = base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
-        read2 = base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz'
+        read1 = basedir + 'not_classified_fastq/{file}_1.fastq.gz',
+        read2 = basedir + 'not_classified_fastq/{file}_2.fastq.gz'
     output:
-        f"{base}/spades/{{file}}/contigs.fasta"
+        basedir + 'spades/{file}/contigs.fasta'
     conda:
         'envs/spades.yaml'
     threads: 20
@@ -77,11 +80,11 @@ rule spades:
     
 rule deduplicate_fastq:
     input:
-        read1 = base+'not_classified_fastq/'+"{file}"+'_1.fastq.gz',
-        read2 = base+'not_classified_fastq/'+"{file}"+'_2.fastq.gz'
+        read1 = basedir + 'not_classified_fastq/{file}_1.fastq.gz',
+        read2 = basedir + 'not_classified_fastq/{file}_2.fastq.gz'
     output:
-        read1 = base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
-        read2 = base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz'
+        read1 = basedir + 'deduplicated_fastq/{file}_1.fastq.gz',
+        read2 = basedir + 'deduplicated_fastq/{file}_2.fastq.gz'
     threads: 10
     priority: 8
     params: 
@@ -96,11 +99,11 @@ rule deduplicate_fastq:
 
 rule map_extracted_fastq:
     input: 
-        read1 = base+'deduplicated_fastq/'+"{file}"+'_1.fastq.gz',
-        read2 = base+'deduplicated_fastq/'+"{file}"+'_2.fastq.gz',
+        read1 = basedir + 'deduplicated_fastq/{file}_1.fastq.gz',
+        read2 = basedir + 'deduplicated_fastq/{file}_2.fastq.gz',
         reference = genome_reference,
         index_ref = genome_reference + '.amb'
-    output: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
+    output: basedir + 'unclassified_sorted_bam/{file}.sorted.bam'
     threads: 10
     priority: 10
     conda:
@@ -115,10 +118,10 @@ rule map_extracted_fastq:
         """
         
 rule calculate_coverage_and_quality:
-    input: base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
+    input: basedir + 'unclassified_sorted_bam/{file}.sorted.bam'
     output: 
-        coverage = base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
-        quality = base + 'calculated_coverage_and_quality/' + '{file}_quality' + '.txt'
+        coverage = basedir + 'calculated_coverage_and_quality/{file}_coverage.txt',
+        quality = basedir + 'calculated_coverage_and_quality/{file}_quality.txt'
     priority:12
     conda:
         "envs/bwa.yaml"
@@ -132,10 +135,10 @@ rule calculate_coverage_and_quality:
 
 rule count_snp:
     input: 
-        coverage = base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
-        bam = base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam'
+        coverage = basedir + 'calculated_coverage_and_quality/{file}_coverage.txt',
+        bam = basedir + 'unclassified_sorted_bam/{file}.sorted.bam'
     output:
-        base + '/snps/{file}.csv'
+        basedir + 'snps/{file}.csv'
     conda:
         "envs/freebayes.yaml"
     params:
@@ -150,11 +153,11 @@ rule count_snp:
      
 rule convert_coverage:
     input: 
-        coverage = base + 'calculated_coverage_and_quality/' + '{file}_coverage' + '.txt',
-        snps = base + '/snps/{file}.csv'
+        coverage = basedir + 'calculated_coverage_and_quality/{file}_coverage.txt',
+        snps = basedir + 'snps/{file}.csv'
     output: 
-        main = base + 'ictv_coverage/' + '{file}' + '.csv',
-        tmp = f'{base}tmp/cov_tmp/{{file}}.txt'
+        main = basedir +'ictv_coverage/{file}.csv',
+        tmp = basedir + 'tmp/cov_tmp/{file}.txt'
     conda: 'envs/scripts.yaml'
     priority:
         16
@@ -166,15 +169,15 @@ rule convert_coverage:
         
 rule plot_coverage:
     input:
-        bam = base + 'unclassified_sorted_bam/' + '{file}' + '.sorted.bam',
-        coverage = f'{base}tmp/cov_tmp/{{file}}.txt'
-    output: directory(f'{base}drawings/{{file}}/')
+        bam = basedir + 'unclassified_sorted_bam/{file}.sorted.bam',
+        coverage = basedir + 'tmp/cov_tmp/{file}.txt'
+    output: directory(basedir + 'drawings/{file}/')
     priority:
         37
     conda:
         'envs/bamsnap.yaml'
     params:
-        reference=genome_reference
+        reference = genome_reference
     
     shell:
         """
@@ -183,41 +186,41 @@ rule plot_coverage:
         
 rule hmm_scan:
     input: 
-        read1 = f"{base}/spades/{{file}}/contigs.fasta"
+        read1 = basedir + 'spades/{file}/contigs.fasta'
     params:
-        reference = HMM_folder,
+        reference = HMM_folder
     threads: 10
     priority:
         38
     conda: 'envs/hmm_scan.yaml'
     output:
-        read1 = f'{base}/hmm_results/{{file}}.csv'
+        read1 = basedir + 'hmm_results/{file}.csv'
     shell:
-        f"""
-        python scripts/analyze_seq_hmm.py -f {{input.read1}} -o {{output.read1}} -m {{params.reference}} -t {{threads}}  --batch 10000 
+        """
+        python scripts/analyze_seq_hmm.py -f {input.read1} -o {output.read1} -m {params.reference} -t {threads} --batch 10000 
         
         """
          
 rule hmm_report:
     input: 
-        read1 = f'{base}/hmm_results/{{file}}.csv'
+        read1 = basedir + 'hmm_results/{file}.csv'
     params:
         reference = HMM_info,
     conda: 'envs/plot_hmm.yaml'
     priority:
         40
     output:
-        report = f'{base}/hmm_reports/{{file}}.csv',
-        hmm_list = f'{base}/phylo/{{file}}/hmm_list.csv'
+        report = basedir + 'hmm_reports/{file}.csv',
+        hmm_list = basedir + 'phylo/{file}/hmm_list.csv'
     shell:
-        f"""
-        python scripts/generate_hmm_report.py -i {{input.read1}} -o {{output.report}} -m {{params.reference}} -t {{output.hmm_list}}
+        """
+        python scripts/generate_hmm_report.py -i {input.read1} -o {output.report} -m {params.reference} -t {output.hmm_list}
         
         """
 
 rule generalise_hmm_list:
-    input: expand(f'{base}/phylo/{{file}}/hmm_list.csv', file=files)
-    output: base + 'phylo/' + 'ictv_list.csv'
+    input: expand(basedir + 'phylo/{file}/hmm_list.csv', file=files)
+    output: basedir + 'phylo/ictv_list.csv'
     shell:
         """
         cat {input} > {output}
@@ -227,7 +230,7 @@ rule generalise_hmm_list:
 rule analyse_ictv:
     input: 
         read1 = genome_reference,
-        hmm_list = base + 'phylo/' + 'ictv_list.csv'
+        hmm_list = basedir + 'phylo/ictv_list.csv'
     params:
         reference = HMM_folder
     threads: 10
@@ -235,37 +238,37 @@ rule analyse_ictv:
         38
     conda: 'envs/hmm_scan.yaml'
     output:
-        read1=f'{base}/phylo/ictv_result.csv'
+        read1 = basedir + 'phylo/ictv_result.csv'
     shell:
-        f"""
-        python scripts/analyze_seq_hmm.py -f {{input.read1}} -o {{output.read1}} -m {{params.reference}} -t {{threads}}  --batch 10000 -l {{input.hmm_list}}
+        """
+        python scripts/analyze_seq_hmm.py -f {input.read1} -o {output.read1} -m {params.reference} -t {threads}  --batch 10000 -l {input.hmm_list}
         
         """
 
 rule ictv_report:
     input: 
-        read1 = f'{base}/phylo/ictv_result.csv'
+        read1 = basedir + 'phylo/ictv_result.csv'
     params:
         reference = HMM_info,
     conda: 'envs/plot_hmm.yaml'
     priority:
         40
     output:
-        report = f'{base}/phylo/ictv_report.csv'
+        report = basedir + 'phylo/ictv_report.csv'
     shell:
-        f"""
-        python scripts/generate_hmm_report.py -i {{input.read1}} -o {{output.report}} -m {{params.reference}} 
+        """
+        python scripts/generate_hmm_report.py -i {input.read1} -o {output.report} -m {params.reference} 
         
         """
         
 rule collect_msa:
     input:
         genome_reference = genome_reference,
-        contig_fasta = f"{base}/spades/{{file}}/contigs.fasta",
-        ictv_report = f'{base}/phylo/ictv_report.csv',
-        contig_report = f'{base}/hmm_reports/{{file}}.csv'
+        contig_fasta = basedir + 'spades/{file}/contigs.fasta',
+        ictv_report = basedir + 'phylo/ictv_report.csv',
+        contig_report = basedir + 'hmm_reports/{file}.csv'
     output:
-        directory(f"{base}/phylo/msas/{{file}}/")
+        directory(basedir + 'phylo/msas/{file}/')
     conda: 'envs/phylo.yaml'
     shell:
         """
@@ -274,32 +277,32 @@ rule collect_msa:
         """
 
 rule perform_msa:
-    input: directory(f"{base}/phylo/msas/{{file}}/"),
-    output: directory(f"{base}/phylo/msas_performed/{{file}}/")
+    input: basedir + 'phylo/msas/{file}/',
+    output: directory(basedir + 'phylo/msas_performed/{file}/')
     threads: 2
     conda: 'envs/phylo.yaml'
     shell:
         "bash scripts/muscle_script.sh {input} {output} {threads}"
     
 rule create_tree:
-    input: directory(f"{base}/phylo/msas_performed/{{file}}/"),
-    output: directory(f"{base}/phylo/trees/{{file}}/")
+    input: basedir + 'phylo/msas_performed/{file}/',
+    output: directory(basedir + 'phylo/trees/{file}/')
     threads: 5
     conda: 'envs/phylo.yaml'
     shell:
         "bash scripts/create_tree.sh {input} {output} {threads}"        
  
 rule draw_tree:
-    input: directory(f"{base}/phylo/trees/{{file}}/")
-    output: directory(f"{base}/phylo/trees_drawings/{{file}}/")
+    input: basedir + 'phylo/trees/{file}/'
+    output: directory(basedir + 'phylo/trees_drawings/{file}/')
     conda: 'envs/phylo.yaml'
     shell:
         "python scripts/draw_trees.py -i {input} -o {output}"
 
 rule plot_hmm:
     input:
-        report = f'{base}/hmm_reports/{{file}}.csv'
-    output: directory(f'{base}/hmm_plots/{{file}}/')
+        report = basedir + 'hmm_reports/{file}.csv'
+    output: directory(basedir + 'hmm_plots/{file}/')
     priority:
         41
     conda:
@@ -315,12 +318,12 @@ rule plot_hmm:
         
 rule make_html:
     input:
-        coverage = base + 'ictv_coverage/' + '{file}' + '.csv',
-        drawings = base+'drawings/'+ '{file}',
-        hmm=f'{base}/hmm_reports/{{file}}.csv',
-        hmm_plots = f'{base}/hmm_plots/{{file}}/',
-        trees = directory(f"{base}/phylo/trees_drawings/{{file}}/")
-    output: f'{base}/htmls/{{file}}.html'
+        coverage = basedir + 'ictv_coverage/' + '{file}' + '.csv',
+        drawings = basedir+'drawings/'+ '{file}',
+        hmm = basedir + 'hmm_reports/{file}.csv',
+        hmm_plots = basedir + 'hmm_plots/{file}/',
+        trees = basedir + 'phylo/trees_drawings/{file}/'
+    output: basedir + 'htmls/{file}.html'
     conda:
         'envs/plot_hmm.yaml'
     priority:
@@ -333,14 +336,14 @@ rule make_html:
            
 rule make_general_files:
     input: 
-        coverages = base + 'ictv_coverage/',
-        hmms = base + 'hmm_reports/'
+        coverages = basedir + 'ictv_coverage/',
+        hmms = basedir + 'hmm_reports/'
     conda: 'envs/plot_hmm.yaml'
     output: 
-        hmm_general = f'{base}/hmm_general.csv',
-        coverage_general = f'{base}/coverage_general.csv',
-        hmm_general_pic = f'{base}/hmm_general.png',
-        coverage_general_pic = f'{base}/coverage-general.csv'
+        hmm_general = basedir + 'hmm_general.csv',
+        coverage_general = basedir + 'coverage_general.csv',
+        hmm_general_pic = basedir + 'hmm_general.png',
+        coverage_general_pic = basedir + 'coverage_general.png'
     shell:
         """
         python scripts/make_general_plots.py -i {input.coverages} -m {input.hmms} -p {output.coverage_general_pic} -c {output.coverage_general} -t {output.hmm_general} -u {output.hmm_general_pic}
@@ -349,12 +352,12 @@ rule make_general_files:
         
 rule general_html:
     input: 
-        hmm_general = f'{base}/hmm_general.csv',
-        coverage_general = f'{base}/coverage_general.csv',
-        hmm_general_pic = f'{base}/hmm_general.png',
-        coverage_general_pic = f'{base}/coverage-general.csv'
+        hmm_general = basedir + 'hmm_general.csv',
+        coverage_general = basedir + 'coverage_general.csv',
+        hmm_general_pic = basedir + 'hmm_general.png',
+        coverage_general_pic = basedir + 'coverage_general.csv'
     output: 
-        f"{base}/htmls/general_html.html"
+        basedir + 'htmls/general_html.html'
     conda: 'envs/plot_hmm.yaml'
     shell:
         """
