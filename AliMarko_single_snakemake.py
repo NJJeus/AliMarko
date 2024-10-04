@@ -20,7 +20,7 @@ files, = glob_wildcards(input_folder+"{file}"+suffix)
 want_all = (expand(basedir + 'htmls/{file}.html', file=files))
 
 rule all:
-    input:  want_all, basedir + 'phylo/ictv_report.csv'#, f"{base}/general_html.html"
+    input: basedir + 'htmls/general_html.html', want_all
     
 rule index_reference:
     input: genome_reference
@@ -318,16 +318,20 @@ rule make_html:
 rule make_general_files:
     input: 
         coverages = expand(basedir + 'ictv_coverage/{file}.csv', file=files),
-        hmms = expand(base + 'hmm_reports/{file}.csv', file=files)
+        hmms = expand(basedir + 'hmm_reports/{file}.csv', file=files)
     conda: 'envs/plot_hmm.yaml'
     output: 
         hmm_general = basedir + 'hmm_general.csv',
         coverage_general = basedir + 'coverage_general.csv',
         hmm_general_pic = basedir + 'hmm_general.png',
         coverage_general_pic = basedir + 'coverage_general.png'
+    params:
+        reference = genome_reference,
+        coverage_dir = basedir + 'ictv_coverage/',
+        hmm_dir = basedir + 'hmm_reports/'
     shell:
-        f"""
-        python scripts/make_general_plots.py -i {base}/ictv_coverage/ -m {base}/hmm_reports/ -p {{output.coverage_general_pic}} -c {{output.coverage_general}} -t {{output.hmm_general}} -u {{output.hmm_general_pic}}
+        """
+        python scripts/make_general_plots.py -i {params.coverage_dir} -m {params.hmm_dir} -p {output.coverage_general_pic} -c {output.coverage_general} -t {output.hmm_general} -u {output.hmm_general_pic}
 
         """
         
@@ -338,7 +342,7 @@ rule general_html:
         hmm_general_pic = basedir + 'hmm_general.png',
         coverage_general_pic = basedir + 'coverage_general.png'
     output: 
-        basedir + 'general_html.html'
+        basedir + 'htmls/general_html.html'
     conda: 'envs/plot_hmm.yaml'
     shell:
         """

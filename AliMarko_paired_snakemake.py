@@ -16,14 +16,12 @@ kraken_database = '16S_Greengenes_k2db'
 suffix_1 = "_1.fq" # An ending and extension of FASTQ files. They may be comressed with gz or not
 suffix_2 = "_2.fq"
 
-
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
 
 want_all = (expand(basedir + 'htmls/{file}.html', file=files))
 
 rule all:
-    input:  want_all, basedir + 'phylo/ictv_report.csv'#, f"{basedir}/htmls/general_html.html",
-
+    input: basedir + 'htmls/general_html.html', want_all
 
 rule index_reference:
     input: genome_reference
@@ -35,7 +33,6 @@ rule index_reference:
         bwa index {input}
         
         """
-
         
 rule kraken2:
     input: read1 = input_folder + "{file}" + suffix_1,
@@ -53,7 +50,6 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        echo "{base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp"
         kraken2 --threads {{threads}} --confidence 0.7 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
         gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
         gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
@@ -336,17 +332,21 @@ rule make_html:
            
 rule make_general_files:
     input: 
-        coverages = basedir + 'ictv_coverage/',
-        hmms = basedir + 'hmm_reports/'
+        coverages = expand(basedir + 'ictv_coverage/{file}.csv', file=files),
+        hmms = expand(basedir + 'hmm_reports/{file}.csv', file=files)
     conda: 'envs/plot_hmm.yaml'
     output: 
         hmm_general = basedir + 'hmm_general.csv',
         coverage_general = basedir + 'coverage_general.csv',
         hmm_general_pic = basedir + 'hmm_general.png',
         coverage_general_pic = basedir + 'coverage_general.png'
+    params:
+        reference = genome_reference,
+        coverage_dir = basedir + 'ictv_coverage/',
+        hmm_dir = basedir + 'hmm_reports/'
     shell:
         """
-        python scripts/make_general_plots.py -i {input.coverages} -m {input.hmms} -p {output.coverage_general_pic} -c {output.coverage_general} -t {output.hmm_general} -u {output.hmm_general_pic}
+        python scripts/make_general_plots.py -i {params.coverage_dir} -m {params.hmm_dir} -p {output.coverage_general_pic} -c {output.coverage_general} -t {output.hmm_general} -u {output.hmm_general_pic}
 
         """
         
