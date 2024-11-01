@@ -1,0 +1,8 @@
+name: kraken2
+channels:
+  - defaults
+  - bioconda
+  - conda-forge
+dependencies:
+  - tar
+  - kraken2=2.1.2

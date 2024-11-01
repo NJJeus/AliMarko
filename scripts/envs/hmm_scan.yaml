@@ -1,0 +1,8 @@
+name: hmm_scan
+channels:
+  - default
+dependencies:
+  - pip:
+      - biopython
+      - pyhmmer
+      - pandas
