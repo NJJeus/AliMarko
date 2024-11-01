@@ -98,9 +98,7 @@ def create_palette(min_score, max_score):
 def get_color(palette, value):
     try:
         color = mcolors.to_hex(palette.to_rgba(float(value)),keep_alpha=False)
-        print(f'{color} {value}')
     except Exception:
-        print(f'error {value}')
         return 'white'
     return color
 
@@ -159,8 +157,10 @@ for host, row in ictv_drawings.iterrows():
         else:
             virus_name = f'<h3>{virus_name}</h3>'
         
-        virus_list = np.array([row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], 
-                               row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]]).T
+        a = [row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]]
+        #print([len(tr) for tr in a], row.genbank_list[virus_loc], row.fragments_len[virus_loc])
+        virus_list = np.array([row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]])
+        virus_list = virus_list.T
 
 
         images = []
@@ -179,7 +179,7 @@ for host, row in ictv_drawings.iterrows():
     host_dict.update({f'<h2>Host: {host}</h2>':styles.Details(viruses).make_details()})
 
 
-order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
+order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'invertebrates (S)', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
 order = list(set(order + [f'<h2>{i}</h2>' for i in host_dict.keys()]))
 def key_func(x):
     return order.index(x)
@@ -194,6 +194,7 @@ list_of_contigs = hmm_frame['Name'][hmm_frame['Name'].isin(positive_contigs)].un
 contigs_dict = {}
 images_hmm = []
 table_contigs = []
+ic = 0
 for contig in list_of_contigs:
     
     table_contig = hmm_frame.query(f'Name == "{contig}"').drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1)
@@ -211,7 +212,11 @@ for contig in list_of_contigs:
         with open(tree, "rb") as tree_image_file:
             tree_encoded_image= base64.b64encode(tree_image_file.read()).decode()
             tree_HMM = tree.split('__')[1]
-            protein_HMM = table_contig.query(f'HMM == "{tree_HMM}"')['Putative Protein'].unique()[0]
+            try:
+                protein_HMM = table_contig.query(f'HMM == "{tree_HMM}"')['Putative Protein'].unique()[0]
+            except Exception:
+                ic+=1
+                continue
             tree_name = f"<h3>Phylogenetic Tree of {tree_HMM}-Matched Amino Acid Sequences</h3><h3>Putative protein: {protein_HMM}</h3>"
             html_tree = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{tree_encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
             trees_pictures = trees_pictures + '\n' + tree_name + html_tree       

@@ -14,10 +14,14 @@ def if_condition(x, message):
         exit()
         
     
-    
+## 
 def label_func(x):
-    x = re.sub(r'{[^{}]*}', '', str(x)).split('#')[0]
-    return str(x)[:30]
+    x = re.sub(r'{[^{}]*}', '', str(x)).split('#')[0].split("|")[0]
+
+    return str(x)[:28]
+
+
+##
 
 def round_bootstrap(clade):
     if clade.confidence:
@@ -68,7 +72,6 @@ for file in files:
     round_bootstrap(tree.root)
     leaf_nodes = tree.get_terminals()
     fams = {}
-    # Print the names of the leaf nodes
     for leaf in leaf_nodes:
         fams[leaf.name] = leaf.name.split('|')[-1].split('#')[0]
         if "NODE" in leaf.name:
@@ -88,6 +91,7 @@ for file in files:
     patches = [mpatches.Patch(color=color, label=label) for label, color in legend_items]
     
     fig, axes = plt.subplots(1, 1, figsize=(11.5, 5.94), dpi=250)
+    print(labels_dict)
     # Draw the tree
     axes.legend(handles=patches, bbox_to_anchor=(1, 1), loc='upper left')
     Phylo.draw(tree, axes=axes, label_func=label_func,
