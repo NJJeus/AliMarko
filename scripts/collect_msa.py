@@ -227,11 +227,12 @@ for name_c_contig in contigs_names:
                         aa_seq = SeqRecord(sequence.seq[From+shift:To].translate())
                     else:
                         aa_seq = SeqRecord(sequence.seq[From:To].reverse_complement()[shift:].translate())
-                    aa_seq.id = sequence.name + "__"  + contig_rows[k]['Query'] + '__' + str(k)
+                    aa_seq.id = 'CONTIG__' + sequence.name + '__'  + contig_rows[k]['Query'] + '__' + str(k)
                     contig_seqs.append(aa_seq)
                     #print(f"ID: {seq_id}")
 
         for c_seq in contig_seqs:
-            SeqIO.write([c_seq]+genome_seqs, f'{out_folder}/test_{c_seq.id}.fasta', 'fasta')
+            output_name = f"{out_folder}/test_{c_seq.id.replace('CONTIG__', '')}.fasta"
+            SeqIO.write([c_seq]+genome_seqs, output_name, 'fasta')
 print(all_time)
 print(time.process_time() - ztime)

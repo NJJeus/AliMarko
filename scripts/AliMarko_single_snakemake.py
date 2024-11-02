@@ -69,19 +69,19 @@ rule deduplicate_fastq:
         
         """
 
-rule spades:
+rule megahit:
     input:
         read1 = temp(basedir + 'not_classified_fastq/{file}.fastq.gz')
     output:
-        basedir + 'spades/{file}/contigs.fasta'
+        basedir + 'megahit/{file}/contigs.fasta'
     conda:
-        'envs/spades.yaml'
+        'envs/megahit.yaml'
     threads: 10
     params:
         sample = lambda wildcards: wildcards.file
     shell:
         f"""
-        spades.py  -s {{input.read1}} -o {base}/spades/{{params.sample}} -t {{threads}}
+        megahit.py  -s {{input.read1}} -o {base}/megahit/{{params.sample}} -t {{threads}}
         
         """        
 
@@ -174,7 +174,7 @@ rule plot_coverage:
         
 rule hmm_scan:
     input: 
-        read1 = basedir + 'spades/{file}/contigs.fasta'
+        read1 = basedir + 'megahit/{file}/contigs.fasta'
     params:
         reference = HMM_folder
     threads: 10
@@ -247,7 +247,7 @@ rule ictv_report:
 rule collect_msa:
     input:
         genome_reference = genome_reference,
-        contig_fasta = basedir + 'spades/{file}/contigs.fasta',
+        contig_fasta = basedir + 'megahit/{file}/contigs.fasta',
         ictv_report = basedir + 'phylo/ictv_report.csv',
         contig_report = basedir + 'hmm_reports/{file}.csv'
     output:

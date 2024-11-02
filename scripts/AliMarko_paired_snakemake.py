@@ -14,8 +14,8 @@ HMM_folder = config['hmm_folder']# A folder with HMM for analyzis
 HMM_info = config['hmm_info'] # A folder with taxonomy information of HMM
 kraken_database = config['kraken_database']
 
-suffix_1 = "_R1.fastq.gz" # An ending and extension of FASTQ files. They may be comressed with gz or not
-suffix_2 = "_R2.fastq.gz"
+suffix_1 = "_1.fq" # An ending and extension of FASTQ files. They may be comressed with gz or not
+suffix_2 = "_2.fq"
 
 
 
@@ -62,21 +62,22 @@ rule kraken2:
         
         """
 
-rule spades:
+rule megahit:
     input:
         read1 = basedir + 'not_classified_fastq/{file}_1.fastq.gz',
         read2 = basedir + 'not_classified_fastq/{file}_2.fastq.gz'
     output:
-        basedir + 'spades/{file}/contigs.fasta'
+        basedir + 'megahit/{file}/final.contigs.fa'
     conda:
-        'envs/spades.yaml'
+        'envs/megahit.yaml'
     threads: 20
     priority: 5
     params:
         sample = lambda wildcards: wildcards.file
     shell:
         f"""
-        spades.py --meta -1 {{input.read1}} -2 {{input.read2}} -o {base}/spades/{{params.sample}} -t {{threads}} 
+        rm -r {base}/megahit/{{params.sample}}
+        megahit -1 {{input.read1}} -2 {{input.read2}} -o {base}/megahit/{{params.sample}} -t {{threads}} 
         
         """
     
@@ -189,7 +190,7 @@ rule plot_coverage:
         
 rule hmm_scan:
     input: 
-        read1 = basedir + 'spades/{file}/contigs.fasta'
+        read1 = basedir + 'megahit/{file}/final.contigs.fa'
     params:
         reference = HMM_folder
     threads: 10
@@ -234,7 +235,7 @@ rule generalise_hmm_list:
 rule collect_msa:
     input:
         genome_reference = genome_reference,
-        contig_fasta = basedir + 'spades/{file}/contigs.fasta',
+        contig_fasta = basedir + 'megahit/{file}/final.contigs.fa',
         ictv_report = 'ictv_tables/HMM_reports.csv',
         contig_report = basedir + 'hmm_reports/{file}.csv'
     output:

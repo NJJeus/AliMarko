@@ -74,7 +74,7 @@ for file in files:
     fams = {}
     for leaf in leaf_nodes:
         fams[leaf.name] = leaf.name.split('|')[-1].split('#')[0]
-        if "NODE" in leaf.name:
+        if "CONTIG" in leaf.name:
             fams[leaf.name] = "_".join(leaf.name.split('_')[:2])
     palete_set = set(fams.values())
     legend_dict = {}
@@ -82,7 +82,7 @@ for file in files:
     c=0
     for i in palete_set:
         legend_dict[i] = [i*0.9 for i in palette[c]]
-        if i[:4] == 'NODE':
+        if i[:6] == 'CONTIG':
             legend_dict[i] = (0.8901960784313725, 0.10196078431372549, 0.10980392156862745)
         
         c+=1
