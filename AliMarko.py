@@ -7,7 +7,7 @@ description = """AliMarko wrapper"""
 parser = argparse.ArgumentParser(description=description)
 
 parser.add_argument('-m', '--paired', type=str, help='')
-parser.add_argument('-s', '--suffix', type=str, help='')
+parser.add_argument('-s', '--suffix', type=str, help='', default='_#.fq')
 parser.add_argument('-i', '--input_directory', type=str, help='', default="DATA_test/raw_fastq/")
 parser.add_argument('-o', '--output_directory', type=str, help='', default="DATA_test4/")
 parser.add_argument('-g', '--genome_reference', type=str, help='', default='ictv_virus_reference.fa')
@@ -25,11 +25,11 @@ threads = conf.pop('threads')
 current_dir = os.getcwd()
 
 if paired == "paired":
-    cmd = f'snakemake -s scripts/AliMarko_paired_snakemake.py --stats stats.json --use-conda -j {threads}  --printshellcmds --config '
+    cmd = f'snakemake -s scripts/AliMarko_paired_snakemake.py  --use-conda -j {threads} -k --config '
 elif paired == "single":
-    cmd = f'snakemake -s scripts/AliMarko_single_snakemake.py --use-conda -j {threads} --printshellcmds --config --printshellcmds '
+    cmd = f'snakemake -s scripts/AliMarko_single_snakemake.py --use-conda -j {threads} --config '
 else:
-    print('LOL?')
+    print("'paired' argument is incorrect")
     exit()
 
 cmd += f'workdir="{current_dir}" '

@@ -13,10 +13,12 @@ genome_reference = config['genome_reference'] # A fasta file with reference sequ
 HMM_folder = config['hmm_folder']# A folder with HMM for analyzis
 HMM_info = config['hmm_info'] # A folder with taxonomy information of HMM
 kraken_database = config['kraken_database']
+suffix_template = config['suffix']
 
-suffix_1 = "_1.fq" # An ending and extension of FASTQ files. They may be comressed with gz or not
-suffix_2 = "_2.fq"
 
+suffix_1, suffix_2 = [suffix_template .replace('#', str(i)) for i in (1, 2)]
+
+blast_db = 'ictv_virus_reference.db'
 
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
@@ -146,7 +148,7 @@ rule count_snp:
         "envs/freebayes.yaml"
     params:
         reference = genome_reference,
-        threshold=10
+        threshold=5
     priority:
         14
     shell:
@@ -207,7 +209,8 @@ rule hmm_scan:
          
 rule hmm_report:
     input: 
-        read1 = basedir + 'hmm_results/{file}.csv'
+        read1 = basedir + 'hmm_results/{file}.csv',
+        contigs = basedir + 'megahit/{file}/final.contigs.fa'
     params:
         reference = HMM_info,
     conda: 'envs/plot_hmm.yaml'
@@ -215,12 +218,26 @@ rule hmm_report:
         40
     output:
         report = basedir + 'hmm_reports/{file}.csv',
+        output_contigs = basedir + 'hmm_reports/{file}_matched_contigs.fasta',
         hmm_list = basedir + 'phylo/{file}/hmm_list.csv'
     shell:
         """
-        python scripts/generate_hmm_report.py -i {input.read1} -o {output.report} -m {params.reference} -t {output.hmm_list}
+        python scripts/generate_hmm_report.py -i {input.read1} -c {input.contigs} -o {output.report} -m {params.reference} -t {output.hmm_list} -n {output.output_contigs}
         
         """
+
+rule blasts_matched_contigs:
+    input:
+        contigs = basedir + 'hmm_reports/{file}_matched_contigs.fasta'
+    output: basedir + 'hmm_reports/{file}_blastn_results.tsv'
+    params:
+        db = blast_db
+    conda: 'envs/phylo.yaml'
+    shell:
+        """
+        blastn -query {input.contigs} -db {params.db} -out {output} -outfmt '6 qseqid sseqid stitle salltitles pident length mismatch gapopen qstart qend sstart send evalue bitscore'
+        """
+
 
 rule generalise_hmm_list:
     input: expand(basedir + 'phylo/{file}/hmm_list.csv', file=files)
@@ -293,7 +310,8 @@ rule make_html:
         drawings = basedir+'drawings/'+ '{file}',
         hmm = basedir + 'hmm_reports/{file}.csv',
         hmm_plots = basedir + 'hmm_plots/{file}/',
-        trees = basedir + 'phylo/trees_drawings/{file}/'
+        trees = basedir + 'phylo/trees_drawings/{file}/',
+        blast_results = basedir + 'hmm_reports/{file}_blastn_results.tsv'
     output: basedir + 'htmls/{file}.html'
     conda:
         'envs/plot_hmm.yaml'
@@ -301,7 +319,7 @@ rule make_html:
         45
     shell:
         """
-        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -a {input.hmm_plots} -t {input.trees}
+        python scripts/make_html.py -c {input.coverage} -d {input.drawings} -o {output} -m {input.hmm} -a {input.hmm_plots} -t {input.trees} -b {input.blast_results}
         
         """           
            

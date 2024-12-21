@@ -67,8 +67,11 @@ for file in files:
     except Exception:
         print(f"Trere is no tree in treefile {file}")
         continue
-        
-    tree.root_at_midpoint()
+    
+    try:
+        tree.root_at_midpoint()
+    except Exception:
+        continue
     round_bootstrap(tree.root)
     leaf_nodes = tree.get_terminals()
     fams = {}

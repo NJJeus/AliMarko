@@ -4,6 +4,7 @@ channels:
 dependencies:
   - pip
   - pip:
+      - biopython
       - matplotlib
       - seaborn
       - numpy

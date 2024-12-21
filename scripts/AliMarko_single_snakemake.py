@@ -65,7 +65,7 @@ rule deduplicate_fastq:
         'envs/fastp.yaml'
     shell:
         """
-        fastp -w {threads} -i {input.read1}  -o {output.read1}
+        fastp -w {threads} -i {input.read1}  -o {output.read1} --dedup
         
         """
 
@@ -81,6 +81,7 @@ rule megahit:
         sample = lambda wildcards: wildcards.file
     shell:
         f"""
+        rm -r {base}/megahit/{{params.sample}}
         megahit.py  -s {{input.read1}} -o {base}/megahit/{{params.sample}} -t {{threads}}
         
         """        
@@ -98,7 +99,8 @@ rule map_extracted_fastq:
         'envs/bwa.yaml'
     shell:
         """
-        bwa mem -t {threads} {input.reference} {input.read1} | samtools sort -@ {threads} -o {output} -
+        bwa mem -t {threads} {input.reference} {input.read1} | samtools sort -@ {threads} -o {output}.tmp -
+        python scripts/filter_bam.py -i {output}.tmp -o {output}
         samtools index {output}
         
         """

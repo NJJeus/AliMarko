@@ -28,7 +28,6 @@ def correct_position(ax, x, y, text, fontsize, i):
     x0, x1 = tbox.x0, tbox.x1
     xlim = ax.get_xlim()
     step = (xlim[1] - xlim[0]) / 100
-    print(f'coorection!: {text}', x0, x1, xmin, xmax)
     if i > 130:
         return text
     print(xmin < x0 and x1 <= xmax)

@@ -39,6 +39,7 @@ parser.add_argument('-d', '--drawings', type=str, help='A folder with drawings')
 parser.add_argument('-a', '--hmm_drawings', type=str, help='A folder with hmm drawings')
 parser.add_argument('-m', '--hmm_report', type=str, help='A hmm report file')
 parser.add_argument('-t', '--trees_folder', type=str, help='A folder with trees ')
+parser.add_argument('-b', '--blast_results', type=str, help='Blast tsv table')
 
 
 args = parser.parse_args()
@@ -77,6 +78,20 @@ if args.trees_folder:
     trees_folder = args.trees_folder
 else:
     if_condition(False, 'Missed -t argument')
+
+
+if args.blast_results:
+    if_condition(os.path.isfile(args.blast_results), "An input file with blast results does not exists")
+    blast_results = pd.read_table(args.blast_results)
+    blast_results.columns = ['qseqid', 'sseqid', 'stitle', 'salltitles', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
+    blast_results = blast_results.sort_values('bitscore', ascending=False)
+    blast_results = blast_results.drop_duplicates('qseqid')
+    blast_res_dict = blast_results[['qseqid', 'stitle', 'pident', 'length']].set_index('qseqid').to_dict('index')
+    blast_res_dict = {k: f"The best blastn hit: {v['stitle']}. \n Alignment length: {v['length']} bp, identity: {v['pident']}%" for k, v in blast_res_dict.items()}
+    
+else:
+    if_condition(False, 'Missed -b argument')   
+
 
 
 sample_name = os.path.splitext(os.path.basename(ictv_coverage_file))[0]
@@ -158,7 +173,6 @@ for host, row in ictv_drawings.iterrows():
             virus_name = f'<h3>{virus_name}</h3>'
         
         a = [row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]]
-        #print([len(tr) for tr in a], row.genbank_list[virus_loc], row.fragments_len[virus_loc])
         virus_list = np.array([row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]])
         virus_list = virus_list.T
 
@@ -179,27 +193,36 @@ for host, row in ictv_drawings.iterrows():
     host_dict.update({f'<h2>Host: {host}</h2>':styles.Details(viruses).make_details()})
 
 
-order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'invertebrates (S)', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
-order = list(set(order + [f'<h2>{i}</h2>' for i in host_dict.keys()]))
+order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'invertebrates (S)', 'invertebrates, plants', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
+missing_hosts = [f'<h2>Host: {host}</h2>' for host in host_dict.keys() if f'<h2>Host: {host}</h2>' not in order]
+order += missing_hosts
+
 def key_func(x):
     return order.index(x)
 host_dict = sorted(host_dict.items(), key=lambda x: key_func(x[0]))
 host_dict = {f"{key}":value for key, value in host_dict}
 
-
-positive_contigs = hmm_frame.query('Score_ratio > 2').groupby('Name').count().query('Score > 0').reset_index().Name
+##
+positive_contigs = hmm_frame.query('Score_ratio > 0.5').groupby('Name').count().query('Score > 0').reset_index().Name
 positive_contigs = positive_contigs[positive_contigs.isin(positive_contigs)]
+
 
 list_of_contigs = hmm_frame['Name'][hmm_frame['Name'].isin(positive_contigs)].unique()
 contigs_dict = {}
 images_hmm = []
 table_contigs = []
 ic = 0
+##
+
+
 for contig in list_of_contigs:
     
     table_contig = hmm_frame.query(f'Name == "{contig}"').drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1)
     models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
     models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
+
+    blastn_info = '<h4 style="white-space: pre-line">' + blast_res_dict.get(contig, 'No blast hits for this contig') + '</h4>'
+
     
     try:
         picture_path = glob.glob(f"{hmm_draw_folder_path}/*{contig}*")[0]
@@ -208,7 +231,6 @@ for contig in list_of_contigs:
     
     trees_pictures = ''
     for tree in [i for i in tree_files if contig in i]:
-        print(tree)
         with open(tree, "rb") as tree_image_file:
             tree_encoded_image= base64.b64encode(tree_image_file.read()).decode()
             tree_HMM = tree.split('__')[1]
@@ -225,7 +247,7 @@ for contig in list_of_contigs:
     with open(picture_path, "rb") as image_file:
         encoded_image = base64.b64encode(image_file.read()).decode()
         html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
-        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns, palette, get_color).make_table()+'\n'+ html_image + '\n' + trees_pictures}).make_details()
+        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns, palette, get_color).make_table() + '\n' + blastn_info + '\n' + html_image + '\n' + trees_pictures}).make_details()
         images_hmm.append(details_image)
 images_hmm = '\n'.join(images_hmm)
             

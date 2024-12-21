@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 import os
 from re import search
+from Bio import SeqIO
 
 
 description = """Script make reports file from a result file of script 'analyze_seq.py'"""
@@ -12,9 +13,12 @@ parser = argparse.ArgumentParser(description=description)
 
 parser.add_argument('-i', '--input', type=str, help='File or regular expression of file')
 parser.add_argument('-i2', '--input2', type=str, help='File or regular expression of file')
+parser.add_argument('-c', '--contigs_file', type=str, help='Contigs file')
 parser.add_argument('-o', '--output', type=str, help='Output folder')
 parser.add_argument('-m', '--hmm_info', type=str, help='A folder with drawings')
 parser.add_argument('-t', '--hmm_out', type=str, help='A one column csv with models, that have passed the treshold')
+parser.add_argument('-n', '--output_contigs', type=str, help='Output contigs that were matched by HMM')
+
 args = parser.parse_args()
 
 def if_condition(x, message):
@@ -35,6 +39,12 @@ if args.input2:
     input_file2 = args.input2
     input_file2 = pd.read_csv(input_file2, index_col=0)
 
+if args.input:
+    if_condition(os.path.isfile(args.contigs_file), "An input contigs file does not exists")
+    contigs_file = args.contigs_file
+else:
+    if_condition(False, 'Missed -c argument')
+
 
 if args.output:
     output = args.output
@@ -52,6 +62,11 @@ if args.hmm_info:
     hmm_info = pd.read_csv(hmm_info, index_col=0)
 else:
     if_condition(False, 'Missed -h argument')
+
+if args.output_contigs:
+    output_contigs = args.output_contigs
+else:
+    if_condition(False, 'Missed -n argument')
 
     
 def export_seq_data(seq):
@@ -99,11 +114,22 @@ if args.input2:
 
 
     
-report = report.query('Score_ratio > 1.5')
+report = report.query('Score_ratio > 0.5')
 
 if hmm_output:
     report[['Query']].drop_duplicates().to_csv(hmm_output, header=None, index=None)
 
 report.reset_index(drop=True).to_csv(output)
 
-print(f'Successfully end with file "{args.input}"')
+selected_contigs = report['Name'].unique().tolist()
+
+contigs = []
+with open(contigs_file, 'r') as handle:
+    for rec in SeqIO.parse(handle, 'fasta'):
+        if rec.id in selected_contigs:
+            contigs.append(rec)
+
+SeqIO.write(contigs, output_contigs, 'fasta')
+
+
+
