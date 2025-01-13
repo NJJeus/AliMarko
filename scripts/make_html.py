@@ -193,7 +193,7 @@ for host, row in ictv_drawings.iterrows():
     host_dict.update({f'<h2>Host: {host}</h2>':styles.Details(viruses).make_details()})
 
 
-order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'invertebrates (S)', 'invertebrates, plants', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)']]
+order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'invertebrates (S)', 'invertebrates, plants', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)', 'soil (S)', 'freshwater (S)']]
 missing_hosts = [f'<h2>Host: {host}</h2>' for host in host_dict.keys() if f'<h2>Host: {host}</h2>' not in order]
 order += missing_hosts
 
