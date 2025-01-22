@@ -58,11 +58,16 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        kraken2 --threads {{threads}} --confidence 0.7 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
-        gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
-        gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
-        
+        if [ "{{params.kraken2_db}}" = "" ]; then
+            ln -s {{input.read1}} {{output.read1}}
+            ln -s {{input.read2}} {{output.read2}}
+        else
+            kraken2 --threads {{threads}} --confidence 0.7 --db {{params.kraken2_db}} {{input.read1}} {{input.read2}} --use-names --report {{output.kraken2_report}} --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}#.fastq.gz.tmp --paired
+            gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
+            gzip -c {{output.read2}}.tmp > {{output.read2}}; rm {{output.read2}}.tmp
+        fi
         """
+
 
 rule megahit:
     input:

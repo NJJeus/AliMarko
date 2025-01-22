@@ -13,7 +13,7 @@ parser.add_argument('-o', '--output_directory', type=str, help='', default="DATA
 parser.add_argument('-g', '--genome_reference', type=str, help='', default='ictv_virus_reference.fa')
 parser.add_argument('-f', '--hmm_folder', type=str, help='', default='test_HMM/')
 parser.add_argument('-n', '--hmm_info', type=str, help='', default='ictv_tables/hmm_info.csv')
-parser.add_argument('-k', '--kraken_database', type=str, help='', default='16S_Greengenes_k2db')
+parser.add_argument('-k', '--kraken_database', type=str, help='', default='none')
 parser.add_argument('-t', '--threads', type=int, help='', default=4)
 
 args = parser.parse_args()
