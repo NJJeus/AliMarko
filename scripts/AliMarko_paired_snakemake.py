@@ -58,7 +58,8 @@ rule kraken2:
     threads: 10
     shell: 
         f"""
-        if [ "{{params.kraken2_db}}" = "" ]; then
+        if [ "{{params.kraken2_db}}" = "none" ]
+        then
             ln -s {{input.read1}} {{output.read1}}
             ln -s {{input.read2}} {{output.read2}}
         else

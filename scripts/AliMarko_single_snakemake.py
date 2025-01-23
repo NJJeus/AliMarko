@@ -48,7 +48,7 @@ rule kraken2:
         4
     shell: 
        f"""
-        if [ "{{params.kraken2_db}}" = "" ]; then
+        if [ "{{params.kraken2_db}}" = "none" ]; then
             ln -s {{input.read1}} {{output.read1}}
         else
             kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} --use-names --report {{output.kraken2_report}}.tmp --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}.fastq.gz.tmp
