@@ -4,5 +4,5 @@ channels:
 dependencies:
   - pip:
       - biopython
-      - pyhmmer
+      - pyhmmer==0.10.15
       - pandas

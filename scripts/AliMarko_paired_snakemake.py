@@ -18,7 +18,7 @@ suffix_template = config['suffix']
 
 suffix_1, suffix_2 = [suffix_template .replace('#', str(i)) for i in (1, 2)]
 
-blast_db = 'ictv_virus_reference.db'
+blast_db = f'{genome_reference}.db'
 
 
 files, = glob_wildcards(input_folder+"{file}"+suffix_1)
@@ -41,6 +41,15 @@ rule index_reference:
         bwa index {input}
         
         """
+rule create_blastn_reference:
+    input: genome_reference
+    output: f"{blast_db}.nt.ndb"
+    conda: 'envs/phylo.yaml'
+    shell:
+        """
+        makeblastdb -in {input} -dbtype nucl -out {output}
+        """
+
         
 rule kraken2:
     input: read1 = input_folder + "{file}" + suffix_1,
@@ -228,14 +237,15 @@ rule hmm_report:
 
 rule blasts_matched_contigs:
     input:
-        contigs = basedir + 'hmm_reports/{file}_matched_contigs.fasta'
+        contigs = basedir + 'hmm_reports/{file}_matched_contigs.fasta',
+        blast_db = f"{blast_db}.nt.ndb"
     output: basedir + 'hmm_reports/{file}_blastn_results.tsv'
-    params:
-        db = blast_db
     conda: 'envs/phylo.yaml'
     shell:
         """
-        blastn -query {input.contigs} -db {params.db} -out {output} -outfmt '6 qseqid sseqid stitle salltitles pident length mismatch gapopen qstart qend sstart send evalue bitscore'
+        blast_db="{input.blast_db}"
+        blast_db=${{blast_db%.nt.ndb}}
+        blastn -query {input.contigs} -db $blast_db -out {output} -outfmt '6 qseqid sseqid stitle salltitles pident length mismatch gapopen qstart qend sstart send evalue bitscore'
         """
 
 
