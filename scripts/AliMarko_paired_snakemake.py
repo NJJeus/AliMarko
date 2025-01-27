@@ -43,11 +43,13 @@ rule index_reference:
         """
 rule create_blastn_reference:
     input: genome_reference
-    output: f"{blast_db}.nt.ndb"
+    output: f"{blast_db}.ndb"
     conda: 'envs/phylo.yaml'
     shell:
         """
-        makeblastdb -in {input} -dbtype nucl -out {output}
+        blast_db="{output}"
+		blast_db=$(echo $blast_db | sed 's/\.ndb$//')
+        makeblastdb -in {input} -dbtype nucl -out $blast_db
         """
 
         
@@ -238,13 +240,13 @@ rule hmm_report:
 rule blasts_matched_contigs:
     input:
         contigs = basedir + 'hmm_reports/{file}_matched_contigs.fasta',
-        blast_db = f"{blast_db}.nt.ndb"
+        blast_db = f"{blast_db}.ndb"
     output: basedir + 'hmm_reports/{file}_blastn_results.tsv'
     conda: 'envs/phylo.yaml'
     shell:
         """
         blast_db="{input.blast_db}"
-        blast_db=${{blast_db%.nt.ndb}}
+        blast_db=${{blast_db%.ndb}}
         blastn -query {input.contigs} -db $blast_db -out {output} -outfmt '6 qseqid sseqid stitle salltitles pident length mismatch gapopen qstart qend sstart send evalue bitscore'
         """
 
