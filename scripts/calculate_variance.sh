@@ -34,7 +34,7 @@ cat $COVFILE | tail -n +2|  awk "\$6 > $THRESHOLD" | cut -f1 | while read line;
 do
     echo $line
     n_var=$(freebayes -f $REFERENCE $BAMFILE -p 1 -r $line \
-    | vcffilter -f "QUAL > 20 & DP > 10" | grep -v '#' | wc -l)
-    depth=$(samtools depth  $BAMFILE -r $line | awk '$3 > 10' | wc -l)
+    | bcftools filter -e "QUAL <= 20" | grep -v '#' | wc -l)
+    depth=$(samtools depth  $BAMFILE -r $line | awk '$3 > 5' | wc -l)
     echo "$line, $n_var, $depth" >> ${OUT}
 done

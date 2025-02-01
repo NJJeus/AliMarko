@@ -1,0 +1,11 @@
+name: kraken2
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+  - libgcc-ng
+  - htslib=1.17
+  - freebayes
+  - bcftools
+  - samtools=1.17

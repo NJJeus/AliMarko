@@ -117,7 +117,7 @@ csv_files = glob.glob(os.path.join(hmm_dir, '*.csv'))
 # Step 2, 3, and 4: Read each CSV file into a DataFrame, set "Sample" column to the filename without extension, and concatenate all the DataFrames
 dfs = []
 for file in csv_files:
-    df = pd.read_csv(file, index_col=0).query('Score_ratio > 1').groupby('Name').apply(filter_queries).reset_index(drop=True)
+    df = pd.read_csv(file, index_col=0).query('Score_ratio > 0.5').groupby('Name').apply(filter_queries).reset_index(drop=True)
     filename = os.path.splitext(os.path.basename(file))[0]
     df['Sample'] = filename
     dfs.append(df)

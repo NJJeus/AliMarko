@@ -1,0 +1,16 @@
+name: phylo
+channels:
+  - default
+  - conda-forge
+  - bioconda
+dependencies:
+  - pip
+  - mafft
+  - fasttree
+  - blast
+  - pip:
+      - biopython
+      - pandas
+      - openpyxl
+      - matplotlib
+      - seaborn

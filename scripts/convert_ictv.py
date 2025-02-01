@@ -20,9 +20,6 @@ parser.add_argument('-s', '--snps_file', type=str, help='A file with rname, numb
 
 args = parser.parse_args()
 
-
-
-
 if args.coverage:
     if_condition(os.path.isfile(args.coverage), "coverage file doesn't exist")
     coverage_file = args.coverage
@@ -66,30 +63,39 @@ ictv_data = pd.read_excel(f'{tables_folder}/ictv_taxo.xlsx').dropna(subset='Viru
 ictv_data['genbank_list'] = ictv_data['Virus GENBANK accession'].apply(lambda i :
                                                                        [el.split(":")[-1] for el in i.replace(' ', '').split(';')])
 
-ictv_data['Isolate_id'] = ictv_data['Species'] +  '{' + ictv_data['Sort'].astype('str')  + '}'
+ictv_data['Isolate_id'] = ictv_data['Species'] +  '{' + ictv_data['Isolate Sort'].astype('str')  + '}'
 indeces = []
 accessions = []
 
+ictv_data = ictv_data.reset_index()
+
 for index, item in ictv_data.iterrows():
     for accession in item['genbank_list']:
-        indeces.append(item.Isolate_id)
+        indeces.append(item['Isolate_id'])
         accessions.append(accession)
 taxo_index = pd.DataFrame({'ictv_taxo_index':indeces}, index=accessions)
 
 data = pd.merge(left=data, right=snps, left_on='rname', right_on='rname', how='left')
 data['nucleotide_similarity'] = 1 - data['snps'] / (data['deep_sites'] + 1)
 
+
+
 # rname contains database name, accession number and version. We need only an accession number
 data['tmp_rname'] = data['rname'].copy()
-data['rname'] = data['rname'].apply(lambda x: x.split('|')[1])
+data['rname'] = data['rname'].apply(lambda x: x.split('.')[0])
 data = data.set_index('rname')
 
-# Concatenate a coverage data with an ictv metadata 
 
+
+# Concatenate a coverage data with an ictv metadata 
+##
 data = data.copy()
 data = pd.merge(left=data.reset_index(), how='left', right=taxo_index.reset_index(), left_on='rname', right_on='index') # Get index of all accession number
-data = pd.merge(left=data, right=ictv_data.reset_index(), left_on='ictv_taxo_index', right_on='Isolate_id') # Get ictv metadata by accession number
 
+##
+data = pd.merge(left=data, right=ictv_data, left_on='ictv_taxo_index', right_on='Isolate_id') # Get ictv metadata by accession number
+
+##
 # Generalize fragments of one virus
 data[['coverage', 'meanmapq']] = data[['coverage', 'meanmapq']]  * 0.01
 data['len'] = data.endpos - data.startpos + 1 
@@ -124,11 +130,14 @@ indeces = []
 tmp_names = []
 fragments_len = []
 
+
+
 for index, item in data.query('coverage > 0.05 & meanmapq > 19').iterrows():
     for i in range(len(item['tmp_rname'])):
         indeces.append(index)
         tmp_names.append(item.tmp_rname[i])
         fragments_len.append(item.fragments_len[i])
+
 tmp_pic_data = pd.DataFrame(index=indeces, data={'tmp_names':tmp_names, 'fragments_len':fragments_len})
 tmp_pic_data.to_csv(tmp_output, header=False)
 

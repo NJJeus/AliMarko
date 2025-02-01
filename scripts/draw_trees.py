@@ -14,10 +14,14 @@ def if_condition(x, message):
         exit()
         
     
-    
+## 
 def label_func(x):
-    x = re.sub(r'{[^{}]*}', '', str(x)).split('#')[0]
-    return str(x)[:30]
+    x = re.sub(r'{[^{}]*}', '', str(x)).split('#')[0].split("|")[0]
+
+    return str(x)[:28]
+
+
+##
 
 def round_bootstrap(clade):
     if clade.confidence:
@@ -63,15 +67,17 @@ for file in files:
     except Exception:
         print(f"Trere is no tree in treefile {file}")
         continue
-        
-    tree.root_at_midpoint()
+    
+    try:
+        tree.root_at_midpoint()
+    except Exception:
+        continue
     round_bootstrap(tree.root)
     leaf_nodes = tree.get_terminals()
     fams = {}
-    # Print the names of the leaf nodes
     for leaf in leaf_nodes:
         fams[leaf.name] = leaf.name.split('|')[-1].split('#')[0]
-        if "NODE" in leaf.name:
+        if "CONTIG" in leaf.name:
             fams[leaf.name] = "_".join(leaf.name.split('_')[:2])
     palete_set = set(fams.values())
     legend_dict = {}
@@ -79,7 +85,7 @@ for file in files:
     c=0
     for i in palete_set:
         legend_dict[i] = [i*0.9 for i in palette[c]]
-        if i[:4] == 'NODE':
+        if i[:6] == 'CONTIG':
             legend_dict[i] = (0.8901960784313725, 0.10196078431372549, 0.10980392156862745)
         
         c+=1
@@ -88,6 +94,7 @@ for file in files:
     patches = [mpatches.Patch(color=color, label=label) for label, color in legend_items]
     
     fig, axes = plt.subplots(1, 1, figsize=(11.5, 5.94), dpi=250)
+    print(labels_dict)
     # Draw the tree
     axes.legend(handles=patches, bbox_to_anchor=(1, 1), loc='upper left')
     Phylo.draw(tree, axes=axes, label_func=label_func,
