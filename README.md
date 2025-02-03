@@ -63,14 +63,34 @@ Before running the first time, run.
 ```bash
 wget https://genome-idx.s3.amazonaws.com/kraken/16S_Greengenes13.5_20200326.tgz # Download an example Kraken2 database
 tar -xvf 16S_Greengenes13.5_20200326.tgz # Decompres it
-7z x ictv_virus_reference.fa.7z # Decompress the providen reference viral sequnces
+zcat REFERENCE_FILES/ictv_virus_reference_1.fa.gz REFERENCE_FILES/ictv_virus_reference_2.fa.gz > ictv_virus_reference.fa
 ```
 This code initializes all databases for use. The 16S_Greengenes13 Kraken database was downloaded solely for testing the functionality of the pipeline and doesn't fit its primary purposes
 
 
 Run the pipeline
+
+Basic Command Structure
 ```bash
-snakemake -s AliMarko_paired_snakemake.py --use-conda --cores 2 # Run the pipeline
+python AliMarko.py [options]
+```
+Required Options
+
+    -i, --input_directory: Directory containing input FASTQ files
+    -o, --output_directory: Directory for storing output files
+    -g, --genome_reference: Path to the genome reference database
+    -f, --hmm_folder: Folder containing HMM profiles
+    -k, --kraken_database: Path to the Kraken database
+    -m, --paired: Specify if input is paired-end reads (default: single-end)
+    -s, --suffix: Suffix pattern for input files (e.g., "_#.fq" for paired files)
+    -t, --threads: Number of threads for parallel processing (default: 1)
+
+
+Example Usage
+For paired-end reads:
+
+```bash
+python AliMarko.py -i DATA_test/raw_fastq/ -s _#.fq -m paired -o OUTPUT_test/ -k 16S_Greengenes_k2db -f test_HMM/ -t 20
 ```
 
 AliMarko is available on docker hub https://hub.docker.com/r/njjeus/alimarko
