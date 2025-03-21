@@ -1,296 +1,245 @@
-from Bio import SeqIO
-from Bio.Seq import Seq
 import os
-import pyhmmer
-import glob
 import sys
-import numpy as np
-import pandas as pd
+import glob
 import re
 import gzip
 import argparse
+from typing import List, Dict, Tuple, Optional, Set
+from Bio import SeqIO
+from Bio.Seq import Seq
+import numpy as np
+import pandas as pd
+import pyhmmer
 
-description = """The script gets a fastq or a fasta file, translate it and analyzes sequences with HMM profiles"""
+# Constants
+DEFAULT_THREADS = 1
+DEFAULT_BATCH_SIZE = 1000
+DEFAULT_THRESHOLD = 50
+DEFAULT_TO_STOP = False
 
-parser = argparse.ArgumentParser(description=description)
+# Genetic code table
+GENETIC_CODE = {
+    'ATA': 'I', 'ATC': 'I', 'ATT': 'I', 'ATG': 'M',
+    'ACA': 'T', 'ACC': 'T', 'ACG': 'T', 'ACT': 'T',
+    'AAC': 'N', 'AAT': 'N', 'AAA': 'K', 'AAG': 'K',
+    'AGC': 'S', 'AGT': 'S', 'AGA': 'R', 'AGG': 'R',
+    'CTA': 'L', 'CTC': 'L', 'CTG': 'L', 'CTT': 'L',
+    'CCA': 'P', 'CCC': 'P', 'CCG': 'P', 'CCT': 'P',
+    'CAC': 'H', 'CAT': 'H', 'CAA': 'Q', 'CAG': 'Q',
+    'CGA': 'R', 'CGC': 'R', 'CGG': 'R', 'CGT': 'R',
+    'GTA': 'V', 'GTC': 'V', 'GTG': 'V', 'GTT': 'V',
+    'GCA': 'A', 'GCC': 'A', 'GCG': 'A', 'GCT': 'A',
+    'GAC': 'D', 'GAT': 'D', 'GAA': 'E', 'GAG': 'E',
+    'GGA': 'G', 'GGC': 'G', 'GGG': 'G', 'GGT': 'G',
+    'TCA': 'S', 'TCC': 'S', 'TCG': 'S', 'TCT': 'S',
+    'TTC': 'F', 'TTT': 'F', 'TTA': 'L', 'TTG': 'L',
+    'TAC': 'Y', 'TAT': 'Y', 'TAA': '*', 'TAG': '*',
+    'TGC': 'C', 'TGT': 'C', 'TGA': '*', 'TGG': 'W',
+}
 
-parser.add_argument('-f', '--file', type=str, help='A file or directory with fastq/fasta extenstion')
-parser.add_argument('-o', '--output', type=str, help='An output folder')
-parser.add_argument('-m', '--hmm', type=str, help='A file or directory with HMM profile')
-parser.add_argument('-t', '--threads', type=str, help='Amount of threads to use')
-parser.add_argument('-b', '--batch', type=str, help='Batch size in which sequences will be analyzed')
-parser.add_argument('-s', '--to_stop', type=str, help='Translate sequences only to stop codon')
-parser.add_argument('-r', '--threshold', type=str, help='Minimum amino acid sequence length for analysis')
-parser.add_argument('-l', '--positive_list', type=str, help='A csv file with HMM to use. It shold have only one column')
+def parse_arguments() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    description = "The script gets a fastq or a fasta file, translates it, and analyzes sequences with HMM profiles."
+    parser = argparse.ArgumentParser(description=description)
 
-args = parser.parse_args()
+    parser.add_argument('-f', '--file', type=str, required=True, help='A file or directory with fastq/fasta extension')
+    parser.add_argument('-o', '--output', type=str, required=True, help='An output folder')
+    parser.add_argument('-m', '--hmm', type=str, required=True, help='A file or directory with HMM profile')
+    parser.add_argument('-t', '--threads', type=int, default=DEFAULT_THREADS, help='Amount of threads to use')
+    parser.add_argument('-b', '--batch', type=int, default=DEFAULT_BATCH_SIZE, help='Batch size for sequence analysis')
+    parser.add_argument('-s', '--to_stop', action='store_true', help='Translate sequences only to stop codon')
+    parser.add_argument('-r', '--threshold', type=int, default=DEFAULT_THRESHOLD, help='Minimum amino acid sequence length for analysis')
+    parser.add_argument('-l', '--positive_list', type=str, help='A CSV file with HMMs to use. It should have only one column')
 
-def if_condition(x, message):
-    if not x:
-        print(message)
-        exit()
+    return parser.parse_args()
 
-print(args)
-    
-
-if args.file:
-    if os.path.isfile(args.file):
-        file = args.file
-    elif os.path.isdir(args.file):
-        file = f'{args.file}/*'
+def validate_input_path(path: str, is_directory: bool = False) -> str:
+    """Validate and ensure the existence of the input path (file or directory)."""
+    if is_directory:
+        # If it's a directory, ensure it exists or create it
+        if not os.path.exists(path):
+            os.makedirs(path, exist_ok=True)
+        return path
     else:
-        if_condition(False, "An input file does not exists")
-else:
-    if_condition(False, 'Missed -f argument')
+        # If it's a file, ensure its parent directory exists or create it
+        parent_dir = os.path.dirname(path)
+        if parent_dir and not os.path.exists(parent_dir):
+            os.makedirs(parent_dir, exist_ok=True)
+        return path
 
+def load_positive_list(file_path: Optional[str]) -> Set[str]:
+    """Load a list of positive HMMs from a CSV file."""
+    if file_path:
+        return set(pd.read_csv(file_path, header=None)[0].tolist())
+    return set()
 
-if args.hmm:
-    if os.path.isfile(args.hmm):
-        hmm_path = args.hmm
-    elif os.path.isdir(args.hmm):
-        hmm_path = f'{args.hmm}/*'
-    else:
-        if_condition(False, "An HMM file does not exists")
-else:
-    if_condition(False, 'Missed -m argument')
-    
-
-if args.output:
-    if os.path.isfile(args.file):
-        output = args.output
-    elif os.path.isdir(args.file):
-        output_dir = args.output
-        if not os.path.exists(output_dir):
-            os.mkdir(output_dir)    
-else:
-    if_condition(False, 'Missed -o argument')
-
-    
-if args.threads:
-    threads = int(args.threads)
-else:
-    threads = 1
-    
-if args.to_stop:
-    to_stop = args.to_stop
-else:
-    to_stop = False
-    
-if args.batch:
-    batch = int(args.batch)
-else:
-    batch = 1000
-    
-if args.positive_list:
-    pos_list = set(pd.read_csv(args.positive_list, header=None)[0].to_list())
-else:
-    pos_list = False
-
-if args.threshold:
-    threshold = int(args.threshold)
-else:
-    threshold = 50
-
-nnn_table = {
-        'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
-        'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
-        'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
-        'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',                
-        'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
-        'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
-        'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
-        'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
-        'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
-        'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
-        'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
-        'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
-        'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
-        'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
-        'TAC':'Y', 'TAT':'Y', 'TAA': '*', 'TAG': '*',
-        'TGC':'C', 'TGT':'C', 'TGA': '*', 'TGG':'W',
-    }
-
-def translate(seqs, nnn_table, threshold=90, to_stop=True):
-    """
-    This function tranlate a list of sequence and return only translations that are longer than threshold
-    seqs
-    
-    """
+def _translate_to_stop(seq: str, genetic_code: Dict[str, str], threshold: int, info: str) -> List[Tuple[str, str]]:
+    """Translate a sequence until a stop codon is encountered and attach metadata."""
     proteins = []
-    if to_stop:
-        translate_func = _translate_to_stop
-    else:
-        translate_func = _translate_non_stop
-    
-    for seq in seqs:
-        proteins.append(translate_func(seq, nnn_table, threshold=threshold))
-    
-    return np.concatenate(proteins)
-
-def _translate_to_stop(seq_array, nnn_table, threshold):
-    
-    
-    proteins= []
-    seq, seq_range= seq_array
-    count = 0
-    seq_len = len(seq)
-    skews = {0:seq_len, 1:seq_len, 2:seq_len}
+    skews = {0: len(seq), 1: len(seq), 2: len(seq)}
     for match in re.finditer(r'TGA|TAA|TAG', seq):
-        count += 1
         skew = match.start() % 3
         skews[skew] = min(skews[skew], match.start())
 
-    skews_a = [key for key, value in skews.items() if value >= threshold]
-
-    for skew in skews_a:
-
+    for skew in [key for key, value in skews.items() if value >= threshold]:
         protein = []
-        count = 0
         seq_trunc = seq[skew:]
-
         end = min(skews[skew], len(seq_trunc))
-        
-
 
         for i in range(0, (end // 3) * 3, 3):
-            aa = nnn_table.get(seq_trunc[i:i + 3], 'X')
+            aa = genetic_code.get(seq_trunc[i:i + 3], 'X')
             protein.append(aa)
-        else:
-            proteins.append(["".join(protein)])
+        proteins.append(("".join(protein), f'{info};skew_{skew};'))
     return proteins
 
-def _translate_non_stop(seq_array, nnn_table, threshold):
-    proteins= []
-    count = 0
-    
-    seq, seq_info = seq_array
-    
-    skews_a = [0, 1, 2]
-
-    for skew in skews_a:
-
+def _translate_non_stop(seq: str, genetic_code: Dict[str, str], threshold: int, info: str) -> List[Tuple[str, str]]:
+    """Translate the entire sequence, including stop codons, and attach metadata."""
+    proteins = []
+    for skew in [0, 1, 2]:
         protein = []
-        count = 0
         seq_trunc = seq[skew:]
-        end = len(seq_trunc)
-
-
-        for i in range(0, (end // 3) * 3, 3):
-            aa = nnn_table.get(seq_trunc[i:i + 3], 'X')
+        for i in range(0, (len(seq_trunc) // 3) * 3, 3):
+            aa = genetic_code.get(seq_trunc[i:i + 3], 'X')
             protein.append(aa)
-        else:
-            proteins.append(["".join(protein), seq_info+f';skew_{skew};'])
-    return np.array(proteins)    
+        proteins.append(("".join(protein), f'{info};skew_{skew};'))
+    return proteins
 
-def separate_string(string, max_length, info):
-    parts = []
-    len_string = len(string)
-    for i in range(0, len_string, max_length):
-        substring = string[i:i+max_length]
-        parts.append([substring, f'{info};part_{i};len_{len(substring)};len_contig_{len_string}'])
-    return parts
+def translate_sequence(seq: str, genetic_code: Dict[str, str], threshold: int, to_stop: bool, info: str) -> List[Tuple[str, str]]:
+    """Translate a DNA sequence into a protein sequence and return it with metadata."""
+    if to_stop:
+        return _translate_to_stop(seq, genetic_code, threshold, info)
+    else:
+        return _translate_non_stop(seq, genetic_code, threshold, info)
 
-def analyse_seqs(hmms, seqs, scores_global):
-    
-    global threads
-    
-    hits = pyhmmer.hmmer.hmmsearch(hmms, seqs, cpus=threads)
+def _split_sequence(seq: str, info: str, max_length: int = 300000) -> List[Tuple[str, str]]:
+    """Split a sequence into smaller parts and attach metadata."""
+    return [(seq[i:i + max_length], f'{info};part_{i};len_{len(seq[i:i + max_length])};len_contig_{len(seq)}') for i in range(0, len(seq), max_length)]
+
+def analyze_sequences(hmms: List[pyhmmer.plan7.HMM], sequences: List[pyhmmer.easel.DigitalSequence], scores_global: np.ndarray, threads: int) -> np.ndarray:
+    """Analyze sequences using HMM profiles."""
+    hits = pyhmmer.hmmer.hmmsearch(hmms, sequences, cpus=threads)
     for hit in hits:
-        for hit2 in hit:
+        for domain in hit:
             try:
-                scores = np.array([(hit.query_name, hit2.name, i.score, i.alignment.target_from, i.alignment.target_to) for i in hit2.domains])
+                scores = np.array([(hit.query_name, domain.name, i.score, i.alignment.target_from, i.alignment.target_to) for i in domain.domains])
                 scores_global = np.concatenate([scores_global, scores])
-
             except ValueError:
                 pass
     return scores_global
 
-def analyse_file(seq_file, hmms, threshold=90, batch=100000, type_of_file='fastq', to_stop=False):
-    """
-    Get a fasta/fastq file
-    Iterate through seqs
-    Split reads to parts less then 100000
-    Translate reads. By default, add to futher analysis only translations with distance to stop-codon bigger then threshold
-    Runs reads through the HMMer3 with pyhmmerv in batchs size of "batch" parameter
-    Return a dataframe with columns: 'Query'(name of HMM), 'Name'(name of read), 'Score'(best domain score)
-    
-    seq_file - seq_file
-    hmms - list of hmms of pyhmmer format
-    threshold - minimum len of translated sequence
-    batch - size of batch that go to the pyhmmer
-    type_of_file - fastq/fasta
-    to_stop - translate sequence only to stop-codon(True) or translate entire seq with stop-codon(False)
-    
-    """
-    
-    
-    fastq_seq = SeqIO.parse(seq_file, type_of_file)
-    i=0
-    c=0
+def analyze_file(seq_file: str, hmms: List[pyhmmer.plan7.HMM], threshold: int, batch_size: int, file_type: str, to_stop: bool, threads: int) -> pd.DataFrame:
+    """Analyze sequences in a file using HMM profiles."""
+    sequences = []
     scores_global = np.empty([0, 5])
-    seqs = []
-    for dna_record in fastq_seq:
-        i+=1
-        dna_seqs = np.concatenate([separate_string(str(dna_record.seq), 300000, f'{dna_record.name};chain_+1'), separate_string(str(dna_record.seq.reverse_complement()), 300000, f'{dna_record.name};chain_-1')])
-        
 
-        # generate all translation frames
-        aa_seqs = translate(dna_seqs, nnn_table, threshold=threshold, to_stop=to_stop)
-        aa_seqs = [pyhmmer.easel.TextSequence(sequence=str(i[0]), name=bytes(i[1], 'utf-8')).digitize(hmm.alphabet) for i in aa_seqs]
+    for i, dna_record in enumerate(SeqIO.parse(seq_file, file_type)):
+        # Split the sequence into smaller parts
+        dna_seqs = _split_sequence(str(dna_record.seq), f'{dna_record.name};chain_+1') + _split_sequence(str(dna_record.seq.reverse_complement()), f'{dna_record.name};chain_-1')
 
-        seqs += aa_seqs
-        c+=len(aa_seqs)
+        # Translate each DNA sequence into protein sequences
+        aa_seqs = []
+        for seq, info in dna_seqs:
+            translated = translate_sequence(seq, GENETIC_CODE, threshold, to_stop, info)
+            aa_seqs.extend(translated)
 
-        if i % batch == 0:
+        # Debug: Print the structure of aa_seqs
+        print(f"aa_seqs structure: {aa_seqs}")
 
-            scores_global = analyse_seqs(hmms, seqs, scores_global)
-            del seqs
-            seqs = []
-    scores_global = analyse_seqs(hmms, seqs, scores_global)
-    del seqs
-    
-    result_frame = pd.DataFrame(np.array(scores_global), columns=['Query', 'Name', 'Score', 'From', 'To'])
-    result_frame.Score = result_frame.Score.astype('float')
-    result_frame.Name = result_frame.Name.astype('str')
-    result_frame[['From', 'To']] = result_frame[['From', 'To']].astype('int')
-    result_frame.Query = result_frame.Query.astype('str')
+        # Convert protein sequences to pyhmmer-compatible format
+        digitized_seqs = [pyhmmer.easel.TextSequence(sequence=seq, name=bytes(info, 'utf-8')).digitize(hmms[0].alphabet) for seq, info in aa_seqs]
+        sequences.extend(digitized_seqs)
+
+        # Analyze sequences in batches
+        if (i + 1) % batch_size == 0:
+            scores_global = analyze_sequences(hmms, sequences, scores_global, threads)
+            sequences.clear()
+
+    # Analyze any remaining sequences
+    if sequences:
+        scores_global = analyze_sequences(hmms, sequences, scores_global, threads)
+    # Create the DataFrame without specifying dtype
+    result_frame = pd.DataFrame(scores_global, columns=['Query', 'Name', 'Score', 'From', 'To'])
+    # Set the data types for each column using astype
+    result_frame = result_frame.astype({
+		'Query': 'str',        # Ensure Query is string
+		'Name': 'str',         # Ensure Name is string
+		'Score': 'float32',    # Ensure Score is 32-bit float
+		'From': 'int32',       # Ensure From is 32-bit integer
+		'To': 'int32'          })
     return result_frame
 
-def check_type_of_file(extension):
-    if extension in ['fasta', 'fna', 'ffn', 'faa', 'frn', 'fa']:
+
+def load_hmms(hmm_path: str, positive_list: Optional[Set[str]] = None) -> List[pyhmmer.plan7.HMM]:
+    """Load HMM profiles from a file or directory."""
+    hmms = []
+    if os.path.isfile(hmm_path):
+        # Load a single HMM file
+        with pyhmmer.plan7.HMMFile(hmm_path) as hmm_file:
+            hmms.append(hmm_file.read())
+    elif os.path.isdir(hmm_path):
+        # Load all HMM files in the directory
+        for hmm_file in glob.glob(os.path.join(hmm_path, '*')):
+            try:
+                with pyhmmer.plan7.HMMFile(hmm_file) as f:
+                    hmms.append(f.read())
+            except Exception as e:
+                print(f"Error loading HMM file {hmm_file}: {e}")
+    else:
+        raise ValueError(f"Invalid HMM path: {hmm_path}")
+
+    # Filter HMMs based on the positive list
+    if positive_list:
+        hmms = [hmm for hmm in hmms if str(hmm.name.decode("utf-8")) in positive_list]
+
+    return hmms
+
+def main():
+    args = parse_arguments()
+
+    # Validate input paths
+    input_path = validate_input_path(args.file)
+    hmm_path = validate_input_path(args.hmm)
+
+    # Handle output path
+    if os.path.isdir(args.output):
+        # If output is a directory, ensure it exists
+        output_path = validate_input_path(args.output, is_directory=True)
+    else:
+        # If output is a file, ensure its parent directory exists
+        output_path = validate_input_path(args.output)
+
+    # Load positive list if provided
+    positive_list = load_positive_list(args.positive_list)
+
+    # Load HMM profiles
+    hmms = load_hmms(hmm_path, positive_list)
+
+    # Analyze sequences
+    results = {}
+    for file in glob.glob(input_path):
+        file_type = _get_file_type(file)
+        file_name = os.path.basename(file).rsplit('.', 2)[0] if file.endswith('.gz') else os.path.basename(file).rsplit('.', 1)[0]
+        print(f'Analyzing file: {file_name}')
+        results[file] = analyze_file(file, hmms, args.threshold, args.batch, file_type, args.to_stop, args.threads)
+
+        # Save results
+        if os.path.isfile(args.file):
+            results[file].to_csv(output_path)
+        else:
+            results[file].to_csv(os.path.join(output_path, f'{file_name}.csv'))
+
+def _get_file_type(file_path: str) -> str:
+    """Determine the file type based on the extension."""
+    if file_path.endswith('.gz'):
+        ext = file_path.split('.')[-2]
+    else:
+        ext = file_path.split('.')[-1]
+    if ext in ['fasta', 'fna', 'ffn', 'faa', 'frn', 'fa']:
         return 'fasta'
-    elif extension in ['fastq', 'fq']:
+    elif ext in ['fastq', 'fq']:
         return 'fastq'
     else:
-        raise  OSError('Input file must be a fasta or fastq')
+        raise ValueError(f'Unsupported file type: {ext}')
 
-hmms = []
-list_of_files = glob.glob(hmm_path)
-for i in list_of_files:
-    with pyhmmer.plan7.HMMFile(i) as hmm_file:
-        hmms.append(hmm_file.read())
-print(pos_list)
-print(str(hmms[0].name))
-if pos_list:
-    hmms = [h for h in hmms if str(h.name.decode("utf-8")) in pos_list]
-hmm = hmms[0]
-
-
-results_dict = {}
-for i in glob.glob(file):
-    if i.split('.')[-1] == 'gz':
-        i_open = gzip.open(i, "rt")
-        type_of_file = check_type_of_file(i.split('.')[-2])
-        file_name =  '.'.join(i.split("/")[-1].split(".")[:-2])
-    else:
-        i_open = i
-        file_name =  '.'.join(i.split("/")[-1].split(".")[:-1])
-        type_of_file = check_type_of_file(i.split('.')[-1])
-    print(f'Iterate HMMs through file "{i.split("/")[-1].split(".")[0]}"')
-    results_dict[i] = analyse_file(i_open, hmms,threshold=threshold, batch=batch, type_of_file=type_of_file, to_stop=to_stop)
-     
-    if os.path.isfile(args.file):
-        results_dict[i].to_csv(f'{output}')
-    elif os.path.isdir(args.file):
-        results_dict[i].to_csv(f'{output_dir}/{file_name}.csv')
-    
+if __name__ == '__main__':
+    main()
