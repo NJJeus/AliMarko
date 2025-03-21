@@ -1,130 +1,152 @@
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import seaborn as sns
-sns.set_theme()
 import os
-
 import argparse
 
-cmap = cm.ScalarMappable(cmap='jet')  # Choose the colormap
+# Set Seaborn theme
+sns.set_theme()
 
+def parse_arguments():
+    """Parse command-line arguments."""
+    description = """The script gets a report CSV file and returns a folder with plots for all contigs."""
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-i', '--input_file', type=str, required=True, help='Input CSV file')
+    parser.add_argument('-o', '--output_dir', type=str, required=True, help='Output directory for plots')
+    return parser.parse_args()
 
-description = """The script gets a report csv hmm file and returns a folder with plots fro all contings"""
-
-parser = argparse.ArgumentParser(description=description)
-
-parser.add_argument('-i', '--input_file', type=str, help='A file or directory with fastq/fasta extenstion')
-parser.add_argument('-o', '--output_dir', type=str, help='An output folder')
-
-def correct_position(ax, x, y, text, fontsize, i):
-    i = i +1
-    obj_text = ax.text(x, y, text, fontdict={"fontsize":fontsize}, ha='center')
-    bbox = ax.get_window_extent()
-    xmin, xmax = bbox.x0 + 250, bbox.x1 - 250
-    tbox = obj_text.get_window_extent()
-    x0, x1 = tbox.x0, tbox.x1
-    xlim = ax.get_xlim()
-    step = (xlim[1] - xlim[0]) / 100
-    if i > 130:
-        return text
-    print(xmin < x0 and x1 <= xmax)
-    if xmin > x0 and x1 <= xmax:
-        x = x + step
-        #data_coords = ax.transData.inverted().transform((pixel_x, pixel_y))
-        obj_text.remove()
-        return correct_position(ax, x, y, text, fontsize, i)
-    if x0 >= xmin and x1 > xmax:
-        x = x - step
-        obj_text.remove()
-        return correct_position(ax, x, y, text, fontsize, i)
-    if x0 < xmin and x1 > xmax:
-        obj_text.remove()
-        return correct_position(ax, x, y, text, fontsize-1, i)
-
-
-args = parser.parse_args()
-print(args)
-
-def if_condition(x, message):
-    if not x:
-        print(message)
-        exit()
-        
-if args.input_file:
-    if os.path.isfile(args.input_file):
-        input_file = args.input_file
-    else:
-        if_condition(True, "An input file does not exists")
-else:
-    if_condition(False, 'Missed -f argument')
-    
-if args.output_dir:
-    output_dir = args.output_dir
+def validate_inputs(input_file, output_dir):
+    """Validate input file and output directory."""
+    if not os.path.isfile(input_file):
+        raise FileNotFoundError(f"Input file does not exist: {input_file}")
     if not os.path.exists(output_dir):
-        os.mkdir(output_dir)    
-else:
-    if_condition(False, 'Missed -o argument')
+        os.makedirs(output_dir)
 
-
+def correct_text_position(ax, x, y, text, fontsize, max_iterations=130):
+    """
+    Adjust text position to avoid overlap with plot boundaries.
     
-data = pd.read_csv(input_file, index_col=0)
-
-def add_text_centered(ax, x, y, text, max_width, max_font_size):
-    text_obj = ax.text(x, y, text, fontsize=max_font_size, ha='center', va='center')
-
-    while text_obj.get_window_extent().width > max_width:
-        current_pos = text_obj.get_position()
-        if current_pos[0] < x:
-            text_obj.set_position((current_pos[0] + 0.1, current_pos[1]))
-        else:
-            text_obj.set_position((current_pos[0] - 0.1, current_pos[1]))
-
-    return text_obj
-
-        
+    Args:
+        ax: Matplotlib axis object.
+        x, y: Initial text position.
+        text: Text to display.
+        fontsize: Initial font size.
+        max_iterations: Maximum number of iterations to adjust position.
     
+    Returns:
+        str: Adjusted text.
+    """
+    for _ in range(max_iterations):
+        text_obj = ax.text(x, y, text, fontdict={"fontsize": fontsize}, ha='center')
+        bbox = ax.get_window_extent()
+        xmin, xmax = bbox.x0 + 250, bbox.x1 - 250
+        tbox = text_obj.get_window_extent()
+        x0, x1 = tbox.x0, tbox.x1
+        xlim = ax.get_xlim()
+        step = (xlim[1] - xlim[0]) / 100
 
-for contig in data.Name.unique():
-    plt.clf()
-    fig = plt.figure(dpi=400, figsize=(8, 4.5))
-    ax = fig.add_subplot(1,1,1)
+        if xmin < x0 and x1 <= xmax:
+            return text
+        if xmin > x0 and x1 <= xmax:
+            x += step
+        elif x0 >= xmin and x1 > xmax:
+            x -= step
+        elif x0 < xmin and x1 > xmax:
+            fontsize -= 1
+        text_obj.remove()
+    return text
+
+def setup_plot(ax, contig_name, length_contig):
+    """
+    Set up the plot with title and limits.
     
-
-    contig_data = data.query(f'Name == "{contig}"').head(4)
-    length_contig = contig_data.Length_contig.max()
-    ax.text(length_contig/2, 1, f"HMM hits to {contig}", ha='center')
+    Args:
+        ax: Matplotlib axis object.
+        contig_name: Name of the contig.
+        length_contig: Length of the contig.
+    """
+    ax.text(length_contig / 2, 1, f"HMM hits to {contig_name}", ha='center')
     ax.set_xlim([0, length_contig])
-    max_score = contig_data.Score.max()
-    min_score = contig_data.Score.min()
-    if max_score != min_score:
-        pass  # Set the values for the colorbar
-    else:
-        min_score, max_score = 0, min_score
-    cmap = cm.ScalarMappable(cmap='jet') 
-    cmap.set_array([min_score, max_score]) 
-    cmap.autoscale()
-    i=0
-    for index, row in contig_data.iterrows():
-        i-=4
-        color = cmap.to_rgba(row.Score)
-
-        ax.arrow(row.From, i, row.To-row.From, 0, 
-         color=color,
-        width=0.2, head_width=0.4, length_includes_head=True, 
-                 head_length=max(abs(row.To-row.From)/10, length_contig/100))
-        arrowtext = f'{row.Query}:{row["Positive terms"]}, {row.Taxon}'
-        correct_position(ax, (row.From + row.To)/2, i+1, arrowtext, 9, 0)
-        
-
     ax.set_yticks([])
+
+def add_colorbar(ax, cmap, min_score, max_score):
+    """
+    Add a colorbar to the plot.
+    
+    Args:
+        ax: Matplotlib axis object.
+        cmap: Colormap object.
+        min_score: Minimum score for colorbar.
+        max_score: Maximum score for colorbar.
+    """
     cbar = plt.colorbar(cmap, orientation='vertical', ticks=np.linspace(min_score, max_score, num=5), ax=ax)
     cbar.set_label('Score')
-        
+
+def plot_arrows(ax, contig_data, cmap, length_contig):
+    """
+    Plot arrows for HMM hits.
     
-    ax.plot([0, length_contig], [0, 0],linewidth=4.0)
-    ax.set_ylim([i-2, 0.2])
-    plt.savefig(f'{output_dir}/{contig}.svg')
-    plt.close()
+    Args:
+        ax: Matplotlib axis object.
+        contig_data: DataFrame containing contig data.
+        cmap: Colormap object.
+        length_contig: Length of the contig.
+    """
+    for i, (index, row) in enumerate(contig_data.iterrows(), start=-4):
+        color = cmap.to_rgba(row.Score)
+        ax.arrow(row.From, i, row.To - row.From, 0,
+                 color=color, width=0.1, head_width=0.2,
+                 length_includes_head=True,
+                 head_length=max(abs(row.To - row.From) / 10, length_contig / 100))
+        arrow_text = f'{row.Query}:{row["Positive terms"]}, {row.Taxon}'
+        correct_text_position(ax, (row.From + row.To) / 2, i + 0.3, arrow_text, 9)
+
+def plot_contig(ax, contig_data, contig_name):
+    """
+    Plot HMM hits for a single contig.
+    
+    Args:
+        ax: Matplotlib axis object.
+        contig_data: DataFrame containing contig data.
+        contig_name: Name of the contig.
+    """
+    length_contig = contig_data.Length_contig.max()
+    setup_plot(ax, contig_name, length_contig)
+
+    max_score = contig_data.Score.max()
+    min_score = contig_data.Score.min()
+    if max_score == min_score:
+        min_score, max_score = 0, min_score
+
+    cmap = cm.ScalarMappable(cmap='jet')
+    cmap.set_array([min_score, max_score])
+    cmap.autoscale()
+
+    plot_arrows(ax, contig_data, cmap, length_contig)
+    add_colorbar(ax, cmap, min_score, max_score)
+
+    ax.plot([0, length_contig], [0, 0], linewidth=4.0)
+    ax.set_ylim([-contig_data.shape[0] - 2, 0.2])
+
+def main():
+    """Main function to generate plots for contigs."""
+    args = parse_arguments()
+    validate_inputs(args.input_file, args.output_dir)
+
+    data = pd.read_csv(args.input_file, index_col=0)
+
+    for contig in data.Name.unique():
+        plt.clf()
+        fig = plt.figure(dpi=400, figsize=(8, 4.5))
+        ax = fig.add_subplot(1, 1, 1)
+
+        contig_data = data.query(f'Name == "{contig}"').head(4)
+        plot_contig(ax, contig_data, contig)
+
+        plt.savefig(f'{args.output_dir}/{contig}.svg')
+        plt.close()
+
+if __name__ == "__main__":
+    main()
