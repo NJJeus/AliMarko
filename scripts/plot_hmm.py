@@ -67,7 +67,7 @@ def setup_plot(ax, contig_name, length_contig):
         contig_name: Name of the contig.
         length_contig: Length of the contig.
     """
-    ax.text(length_contig / 2, 1, f"HMM hits to {contig_name}", ha='center')
+    ax.text(length_contig / 2, 0.7, f"HMM hits to {contig_name}", ha='center')
     ax.set_xlim([0, length_contig])
     ax.set_yticks([])
 

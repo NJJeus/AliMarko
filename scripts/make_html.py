@@ -1,276 +1,331 @@
-import base64
+import base64 
 import pandas as pd
 import os
 import sys
-sys.path.append('scripts')
-import styles
 import numpy as np
 import glob
 import argparse
-import matplotlib
-
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 
+# Add custom scripts to the Python path
+sys.path.append('scripts')
+import styles
 
-def if_condition(x, message):
-    if not x:
+
+def check_condition(condition, message):
+    """Check a condition and exit with a message if it fails."""
+    if not condition:
         print(message)
-        exit()
-        
-def create_palette(min_score, max_score):
-    return None
-
-
-def get_color(palette, value):
-    try:
-        color = mcolors.to_hex(palette.to_rgba(float(value)),keep_alpha=False)
-    except Exception:
-        return 'white'
-    return color
-        
-description = """ Script that concatenate an ictv coverage data with drawings of coverage"""
-
-parser = argparse.ArgumentParser(description=description)
-
-parser.add_argument('-c', '--coverage', type=str, help='A file fith ictv coverage')
-parser.add_argument('-o', '--output', type=str, help='An output file')
-parser.add_argument('-d', '--drawings', type=str, help='A folder with drawings')
-parser.add_argument('-a', '--hmm_drawings', type=str, help='A folder with hmm drawings')
-parser.add_argument('-m', '--hmm_report', type=str, help='A hmm report file')
-parser.add_argument('-t', '--trees_folder', type=str, help='A folder with trees ')
-parser.add_argument('-b', '--blast_results', type=str, help='Blast tsv table')
-
-
-args = parser.parse_args()
-
-palette = create_palette(0, 10)
-
-if args.coverage:
-    if_condition(os.path.isfile(args.coverage), "An input file does not exists")
-    ictv_coverage_file = args.coverage
-else:
-    if_condition(False, 'Missed -c argument')   
-if args.output:
-    output = args.output
-else:
-    if_condition(False, 'Missed -o argument')
-if args.drawings:
-    if_condition(os.path.isdir(args.drawings), "drawings folder doesn't exist")
-    coverage_draw_folder_path = args.drawings
-else:
-    if_condition(False, 'Missed -t argument')
-
-if args.hmm_drawings:
-    if_condition(os.path.isdir(args.hmm_drawings), "hmm drawings folder doesn't exist")
-    hmm_draw_folder_path = args.hmm_drawings
-else:
-    if_condition(False, 'Missed -a argument')    
-    
-if args.hmm_report:
-    if_condition(os.path.isfile(args.hmm_report), "A hmm report file does not exists")
-    hmm_report = args.hmm_report
-else:
-    if_condition(False, 'Missed -m argument') 
-
-if args.trees_folder:
-    if_condition(os.path.isdir(args.trees_folder), "drawings folder doesn't exist")
-    trees_folder = args.trees_folder
-else:
-    if_condition(False, 'Missed -t argument')
-
-
-if args.blast_results:
-    if_condition(os.path.isfile(args.blast_results), "An input file with blast results does not exists")
-    blast_results = pd.read_table(args.blast_results)
-    blast_results.columns = ['qseqid', 'sseqid', 'stitle', 'salltitles', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
-    blast_results = blast_results.sort_values('bitscore', ascending=False)
-    blast_results = blast_results.drop_duplicates('qseqid')
-    blast_res_dict = blast_results[['qseqid', 'stitle', 'pident', 'length']].set_index('qseqid').to_dict('index')
-    blast_res_dict = {k: f"The best blastn hit: {v['stitle']}. \n Alignment length: {v['length']} bp, identity: {v['pident']}%" for k, v in blast_res_dict.items()}
-    
-else:
-    if_condition(False, 'Missed -b argument')   
-
-
-
-sample_name = os.path.splitext(os.path.basename(ictv_coverage_file))[0]
-ictv_coverage = pd.read_csv(ictv_coverage_file)
-tree_files = glob.glob(f'{trees_folder}/*')
+        sys.exit(1)
 
 
 def create_palette(min_score, max_score):
-    if max_score != min_score:
-        pass  # Set the values for the colorbar
-    else:
+    """Create a color palette for visualization."""
+    if max_score == min_score:
         min_score, max_score = 0, min_score
-    cmap = cm.ScalarMappable(cmap='Blues') 
-    cmap.set_array([min_score, max_score*1.5]) 
+    cmap = cm.ScalarMappable(cmap='Blues')
+    cmap.set_array([min_score, max_score * 1.5])
     cmap.autoscale()
     return cmap
 
 
 def get_color(palette, value):
+    """Get a color from the palette based on the value."""
     try:
-        color = mcolors.to_hex(palette.to_rgba(float(value)),keep_alpha=False)
+        color = mcolors.to_hex(palette.to_rgba(float(value)), keep_alpha=False)
     except Exception:
         return 'white'
     return color
 
+
 def add_string(x, string_to_add):
+    """Add a string to a value if it is not NaN."""
     if pd.notna(x):
-        return  string_to_add + "Sequences of this virus have association with " + str(x) + "." 
-    else:
-        return x
+        return string_to_add + "Sequences of this virus have association with " + str(x) + "."
+    return x
 
 
-ictv_coverage['Feature'] = ictv_coverage['Feature'].apply(add_string, string_to_add='CONTAMINATION_INFO:')
-ictv_coverage['Species'] = ictv_coverage['Species'] + ictv_coverage['Feature'].fillna('')
-
-introduction_frame = ictv_coverage[['Species', 'Host source',
-               'coverage', 'meandepth', 'Genus', 'Family', 'Realm']].query('coverage != 0')
-
-
-
-introduction_header = ['Species', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
-introduction_table = introduction_frame.to_numpy()
-
-
-hmm_frame = pd.read_csv(hmm_report)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
-hmm_frame[['Score', 'Threshold', 'Score_ratio']] = hmm_frame[['Score', 'Threshold', 'Score_ratio']].astype('int')
-hmm_frame = hmm_frame.rename(columns={'Positive terms': 'Putative Protein', 'Query': 'HMM'})
-hmm_header = hmm_frame.drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1).columns
-hmm_table = hmm_frame.drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1).to_numpy()
+def load_blast_results(blast_results_path):
+    """Load and process BLAST results."""
+    blast_results = pd.read_table(blast_results_path)
+    blast_results.columns = ['qseqid', 'sseqid', 'stitle', 'salltitles', 'pident', 'length', 'mismatch', 'gapopen', 
+                           'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
+    blast_results = blast_results.sort_values('bitscore', ascending=False).drop_duplicates('qseqid')
+    blast_res_dict = blast_results[['qseqid', 'stitle', 'pident', 'length']].set_index('qseqid').to_dict('index')
+    return {k: f"The best blastn hit: {v['stitle']}. \n Alignment length: {v['length']} bp, identity: {v['pident']}%" 
+            for k, v in blast_res_dict.items()}
 
 
+def validate_inputs(args):
+    """Validate all input files and directories."""
+    check_condition(os.path.isfile(args.coverage), "An input file does not exist")
+    check_condition(os.path.isdir(args.drawings), "Drawings folder doesn't exist")
+    check_condition(os.path.isdir(args.hmm_drawings), "HMM drawings folder doesn't exist")
+    check_condition(os.path.isfile(args.hmm_report), "A HMM report file does not exist")
+    check_condition(os.path.isdir(args.trees_folder), "Trees folder doesn't exist")
+    check_condition(os.path.isfile(args.blast_results), "An input file with BLAST results does not exist")
 
 
-ictv_drawings = ictv_coverage.query('coverage > 0.05').set_index('Host source')
-
-ictv_drawings['genbank_list'] = ictv_drawings['Virus GENBANK accession'].apply(lambda i :
-                                                                       [el.split(":")[-1] for el in i.replace(' ', '').split(';')])
-
-
-ictv_drawings[['fragments_len', 'fragments_meandepth', 'fragments_coverage', 'fragments_nucleotide_similarity', 'fragments_meanmapq', 'fragments_snps']] = ictv_drawings[['fragments_len',
-       'fragments_meandepth', 'fragments_coverage', 'fragments_nucleotide_similarity', 'fragments_meanmapq', 'fragments_snps']].applymap(lambda x: x.strip('][').split(', '))
-
-ictv_drawings = ictv_drawings.groupby(level=0).agg({i:lambda x: list(x) for i in ictv_drawings.columns})
-
-
+def process_ictv_coverage(coverage_file):
+    """Process ICTV coverage data."""
+    sample_name = os.path.splitext(os.path.basename(coverage_file))[0]
+    ictv_coverage = pd.read_csv(coverage_file)
+    
+    # Add contamination info if present
+    ictv_coverage['Feature'] = ictv_coverage['Feature'].apply(add_string, string_to_add='CONTAMINATION_INFO:')
+    ictv_coverage['Species'] = ictv_coverage['Species'] + ictv_coverage['Feature'].fillna('')
+    
+    return sample_name, ictv_coverage
 
 
-host_dict = {}
-
-# Coverage images
-for host, row in ictv_drawings.iterrows():
-    viruses = {}
-    for virus_loc in range(len(row.Isolate_id)):
-        virus_tech_name = row['Isolate_id'][virus_loc]
-        virus_name = row['Species'][virus_loc]
-        if 'CONTAMINATION_INFO:' in virus_name:
-            virus_name = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]} <span class="tooltip-text">{virus_name.split("CONTAMINATION_INFO:")[1]}</span></h3>'
-        else:
-            virus_name = f'<h3>{virus_name}</h3>'
-        
-        a = [row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]]
-        virus_list = np.array([row.genbank_list[virus_loc], row.fragments_len[virus_loc], row.fragments_coverage[virus_loc], row.fragments_nucleotide_similarity[virus_loc], row.fragments_meandepth[virus_loc], row.fragments_meanmapq[virus_loc], row.fragments_snps[virus_loc]])
-        virus_list = virus_list.T
+def create_introduction_table(ictv_coverage):
+    """Create introduction table from ICTV coverage data."""
+    introduction_frame = ictv_coverage[['Species', 'Host source', 'coverage', 'meandepth', 'Genus', 'Family', 'Realm']].query('coverage != 0')
+    introduction_header = ['Species', 'Host source', 'Coverage width', 'Mean depth', 'Genus', 'Family', 'Realm']
+    return introduction_frame.to_numpy(), introduction_header
 
 
-        images = []
-        for i in row.genbank_list[virus_loc]:
-            try:
-                picture_path = glob.glob(f"{coverage_draw_folder_path}/{virus_tech_name}/*{i}*")[0]
-            except Exception:
-                continue
+def process_hmm_report(hmm_report_path):
+    """Process HMM report data."""
+    hmm_frame = pd.read_csv(hmm_report_path)[['Query', 'Taxon', 'Name', 'Positive terms', 'Score', 'Threshold', 'From', 'To', 'Score_ratio']]
+    hmm_frame[['Score', 'Threshold', 'Score_ratio']] = hmm_frame[['Score', 'Threshold', 'Score_ratio']].astype('int')
+    hmm_frame = hmm_frame.rename(columns={'Positive terms': 'Putative Protein', 'Query': 'HMM'})
+    hmm_header = hmm_frame.drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1).columns
+    hmm_table = hmm_frame.drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1).to_numpy()
+    return hmm_frame, hmm_header, hmm_table
+
+
+def process_ictv_drawings(ictv_coverage, drawings_folder):
+    """Process ICTV drawings data."""
+    ictv_drawings = ictv_coverage.query('coverage > 0.05').set_index('Host source')
+    ictv_drawings['genbank_list'] = ictv_drawings['Virus GENBANK accession'].apply(
+        lambda i: [el.split(":")[-1] for el in i.replace(' ', '').split(';')])
+    fragment_cols = ['fragments_len', 'fragments_meandepth', 'fragments_coverage', 
+                    'fragments_nucleotide_similarity', 'fragments_meanmapq', 'fragments_snps']
+    ictv_drawings[fragment_cols] = ictv_drawings[fragment_cols].applymap(
+        lambda x: x.strip('][').split(', '))
+    ictv_drawings = ictv_drawings.groupby(level=0).agg({i: lambda x: list(x) for i in ictv_drawings.columns})
+    
+    return ictv_drawings
+
+
+def create_host_dict(ictv_drawings, drawings_folder, palette):
+    """Create host dictionary with coverage images."""
+    host_dict = {}
+    for host, row in ictv_drawings.iterrows():
+        viruses = {}
+        for virus_loc in range(len(row.Isolate_id)):
+            virus_tech_name = row['Isolate_id'][virus_loc]
+            virus_name = row['Species'][virus_loc]
+            
+            # Handle contamination info in virus name
+            if 'CONTAMINATION_INFO:' in virus_name:
+                virus_name = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]} ' \
+                            f'<span class="tooltip-text">{virus_name.split("CONTAMINATION_INFO:")[1]}</span></h3>'
+            else:
+                virus_name = f'<h3>{virus_name}</h3>'
+
+            # Prepare virus data for table
+            virus_list = np.array([
+                row.genbank_list[virus_loc],
+                row.fragments_len[virus_loc],
+                row.fragments_coverage[virus_loc],
+                row.fragments_nucleotide_similarity[virus_loc],
+                row.fragments_meandepth[virus_loc],
+                row.fragments_meanmapq[virus_loc],
+                row.fragments_snps[virus_loc]
+            ]).T
+
+            # Load images for this virus
+            images = load_virus_images(drawings_folder, virus_tech_name, row.genbank_list[virus_loc])
+            images_html = '\n'.join(images)
+
+            # Create table and add to viruses dict
+            table_html = styles.Table(
+                virus_list,
+                ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ', 'SNP Count'],
+                palette,
+                get_color
+            ).make_table() + images_html
+            
+            viruses.update({virus_name: table_html})
+
+        host_dict.update({f'<h2>Host: {host}</h2>': styles.Details(viruses).make_details()})
+
+    return host_dict
+
+
+def load_virus_images(drawings_folder, virus_tech_name, genbank_ids):
+    """Load and encode images for a virus."""
+    images = []
+    for genbank_id in genbank_ids:
+        try:
+            picture_path = glob.glob(f"{drawings_folder}/{virus_tech_name}/*{genbank_id}*")[0]
             with open(picture_path, "rb") as image_file:
                 encoded_image = base64.b64encode(image_file.read()).decode()
-                images.append(f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>')
-        images = '\n'.join(images)
-
-        viruses.update({f'{virus_name}':styles.Table(virus_list, ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ',' SNP Count'], palette, get_color).make_table() + images})
-
-    host_dict.update({f'<h2>Host: {host}</h2>':styles.Details(viruses).make_details()})
-
-
-order = [f'<h2>Host: {host}</h2>' for host in ['vertebrates', 'marine (S)', 'invertebrates',  'invertebrates, vertebrates', 'invertebrates (S)', 'invertebrates, plants', 'plants, invertebrates', 'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria', 'archaea', 'sewage (S)', 'soil (S)', 'freshwater (S)']]
-missing_hosts = [f'<h2>Host: {host}</h2>' for host in host_dict.keys() if f'<h2>Host: {host}</h2>' not in order]
-order += missing_hosts
-
-def key_func(x):
-    return order.index(x)
-host_dict = sorted(host_dict.items(), key=lambda x: key_func(x[0]))
-host_dict = {f"{key}":value for key, value in host_dict}
-
-##
-positive_contigs = hmm_frame.query('Score_ratio > 0.5').groupby('Name').count().query('Score > 0').reset_index().Name
-positive_contigs = positive_contigs[positive_contigs.isin(positive_contigs)]
+                images.append(
+                    f'<div style="overflow: hidden; max-height:700px;">'
+                    f'<img alt="" src="data:image/jpeg;base64,{encoded_image}" '
+                    f'alt="Ooops! This should have been a picture" '
+                    f'style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
+                )
+        except Exception:
+            continue
+    return images
 
 
-list_of_contigs = hmm_frame['Name'][hmm_frame['Name'].isin(positive_contigs)].unique()
-contigs_dict = {}
-images_hmm = []
-table_contigs = []
-ic = 0
-##
+def order_host_dict(host_dict):
+    """Order hosts in the host dictionary according to predefined order."""
+    predefined_order = [
+        'vertebrates', 'marine (S)', 'invertebrates', 'invertebrates, vertebrates',
+        'invertebrates (S)', 'invertebrates, plants', 'plants, invertebrates',
+        'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria',
+        'archaea', 'sewage (S)', 'soil (S)', 'freshwater (S)'
+    ]
+    order = [f'<h2>Host: {host}</h2>' for host in predefined_order]
+    missing_hosts = [key for key in host_dict.keys() if key not in order]
+    order += missing_hosts
+    return {key: host_dict[key] for key in sorted(host_dict.keys(), key=lambda x: order.index(x))}
 
 
-for contig in list_of_contigs:
-    
-    table_contig = hmm_frame.query(f'Name == "{contig}"').drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1)
-    models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
-    models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
+def process_hmm_results(hmm_frame, hmm_drawings_folder, trees_folder, blast_res_dict, palette):
+    """Process HMM results and generate HTML content."""
+    positive_contigs = hmm_frame.query('Score_ratio > 0.5').groupby('Name').count().query('Score > 0').reset_index().Name
+    list_of_contigs = hmm_frame['Name'][hmm_frame['Name'].isin(positive_contigs)].unique()
+    images_hmm = []
 
-    blastn_info = '<h4 style="white-space: pre-line">' + blast_res_dict.get(contig, 'No blast hits for this contig') + '</h4>'
+    for contig in list_of_contigs:
+        table_contig = hmm_frame.query(f'Name == "{contig}"').drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1)
+        models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
+        models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
 
-    
-    try:
-        picture_path = glob.glob(f"{hmm_draw_folder_path}/*{contig}*")[0]
-    except Exception:
-        continue
-    
+        blastn_info = '<h4 style="white-space: pre-line">' + blast_res_dict.get(contig, 'No blast hits for this contig') + '</h4>'
+
+        try:
+            picture_path = glob.glob(f"{hmm_drawings_folder}/*{contig}*")[0]
+            with open(picture_path, "rb") as image_file:
+                encoded_image = base64.b64encode(image_file.read()).decode()
+                html_image = create_hmm_image_html(encoded_image)
+                
+                trees_pictures = process_trees_for_contig(trees_folder, contig, table_contig)
+                
+                details_image = styles.Details({
+                    f'<h3>{contig}:{models}<h3>': (
+                        styles.Table(table_contig.to_numpy(), table_contig.columns, palette, get_color).make_table() + 
+                        '\n' + blastn_info + '\n' + html_image + '\n' + trees_pictures
+                    )
+                }).make_details()
+                images_hmm.append(details_image)
+        except Exception:
+            continue
+
+    return '\n'.join(images_hmm)
+
+
+def create_hmm_image_html(encoded_image):
+    """Create HTML for HMM image."""
+    return (
+        f'<div style="overflow: hidden; max-height:700px;">'
+        f'<img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" '
+        f'alt="Ooops! This should have been a picture" '
+        f'style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
+    )
+
+
+def process_trees_for_contig(trees_folder, contig, table_contig):
+    """Process phylogenetic trees for a contig."""
     trees_pictures = ''
-    for tree in [i for i in tree_files if contig in i]:
+    for tree in [i for i in glob.glob(f"{trees_folder}/*") if contig in i]:
         with open(tree, "rb") as tree_image_file:
-            tree_encoded_image= base64.b64encode(tree_image_file.read()).decode()
+            tree_encoded_image = base64.b64encode(tree_image_file.read()).decode()
             tree_HMM = tree.split('__')[1]
             try:
                 protein_HMM = table_contig.query(f'HMM == "{tree_HMM}"')['Putative Protein'].unique()[0]
             except Exception:
-                ic+=1
                 continue
-            tree_name = f"<h3>Phylogenetic Tree of {tree_HMM}-Matched Amino Acid Sequences</h3><h3>Putative protein: {protein_HMM}</h3>"
-            html_tree = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/jpeg;base64,{tree_encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
-            trees_pictures = trees_pictures + '\n' + tree_name + html_tree       
-        
-        
-    with open(picture_path, "rb") as image_file:
-        encoded_image = base64.b64encode(image_file.read()).decode()
-        html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
-        details_image = styles.Details({f'<h3>{contig}:{models}<h3>':styles.Table(table_contig.to_numpy(), table_contig.columns, palette, get_color).make_table() + '\n' + blastn_info + '\n' + html_image + '\n' + trees_pictures}).make_details()
-        images_hmm.append(details_image)
-images_hmm = '\n'.join(images_hmm)
-            
-images_hmm = styles.Details({'<h2>Contigs</h2>\n': images_hmm}).make_details()
+            tree_name = (f"<h3>Phylogenetic Tree of {tree_HMM}-Matched Amino Acid Sequences</h3>"
+                         f"<h3>Putative protein: {protein_HMM}</h3>")
+            html_tree = (
+                f'<div style="overflow: hidden; max-height:700px;">'
+                f'<img alt="" src="data:image/jpeg;base64,{tree_encoded_image}" '
+                f'alt="Ooops! This should have been a picture" '
+                f'style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
+            )
+            trees_pictures = trees_pictures + '\n' + tree_name + html_tree
+    return trees_pictures
 
+
+def generate_html_output(sample_name, style, introduction_table, introduction_header, 
+                        hmm_table, hmm_header, host_dict, images_hmm):
+    """Generate final HTML output."""
+    greetings = f"<p>\n</p><h1> <center>Sample: {sample_name} </h1>"
+    table_html = styles.Table(introduction_table, introduction_header, None, get_color).make_table()
+    hmm_greetings = f"<p>\n</p><h2> <center> HMM Hit Summary </h2><p>\n</p>"
+    table_hmm = styles.Table(hmm_table, hmm_header, None, get_color).make_table()
+    details = styles.Details(host_dict).make_details()
     
-style = styles.set_style
+    return (
+        style.replace('Sample Name', sample_name) + greetings + 
+        "<h2>Mapping Summary</h2>" + table_html + 
+        hmm_greetings + table_hmm + '<p>\n</p><hr>' + 
+        "<h2>Mapping Details</h2>" + details + 
+        '<p>\n</p><p>\n</p><hr>' + 
+        "<h2>HMM Module Results by Contig</h2>" + 
+        styles.Details({'<h2>Contigs</h2>\n': images_hmm}).make_details() + 
+        '<p>\n</p>'
+    )
 
-greatings = f"""
-<p>\n</p>
-<h1> <center>Sample: {sample_name} </h1>
 
-""".format(name=os.path.splitext(os.path.basename(ictv_coverage_file))[0])
+def main():
+    # Argument parsing
+    description = "Script that concatenates ICTV coverage data with drawings of coverage."
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-c', '--coverage', type=str, required=True, help='A file with ICTV coverage')
+    parser.add_argument('-o', '--output', type=str, required=True, help='An output file')
+    parser.add_argument('-d', '--drawings', type=str, required=True, help='A folder with drawings')
+    parser.add_argument('-a', '--hmm_drawings', type=str, required=True, help='A folder with HMM drawings')
+    parser.add_argument('-m', '--hmm_report', type=str, required=True, help='A HMM report file')
+    parser.add_argument('-t', '--trees_folder', type=str, required=True, help='A folder with trees')
+    parser.add_argument('-b', '--blast_results', type=str, required=True, help='BLAST tsv table')
+    args = parser.parse_args()
 
-table_html =  styles.Table(introduction_table, introduction_header, palette, get_color).make_table()
+    # Validate inputs
+    validate_inputs(args)
 
-hmm_greetings = f"<p>\n</p><h2> <center> HMM Hit Summary </h2><p>\n</p>"
+    # Load BLAST results
+    blast_res_dict = load_blast_results(args.blast_results)
 
-table_hmm = styles.Table(hmm_table, hmm_header, palette, get_color).make_table()
+    # Process ICTV coverage data
+    sample_name, ictv_coverage = process_ictv_coverage(args.coverage)
+    introduction_table, introduction_header = create_introduction_table(ictv_coverage)
 
-details = styles.Details(host_dict).make_details()
+    # Process HMM report
+    hmm_frame, hmm_header, hmm_table = process_hmm_report(args.hmm_report)
 
-out = style.replace('Sample Name', sample_name) + greatings + "<h2>Mapping Summary</h2>" + table_html + hmm_greetings +   table_hmm + '<p>\n</p><hr>' + "<h2>Mapping Details</h2>" + details + '<p>\n</p><p>\n</p><hr>' + "<h2>HMM Module Results by Contig</h2>" + images_hmm + '<p>\n</p>'
+    # Process ICTV drawings
+    ictv_drawings = process_ictv_drawings(ictv_coverage, args.drawings)
+    host_dict = create_host_dict(ictv_drawings, args.drawings, None)
+    host_dict = order_host_dict(host_dict)
 
-with open(output, 'w') as f:
-    f.write(out)
+    # Process HMM results
+    images_hmm = process_hmm_results(hmm_frame, args.hmm_drawings, args.trees_folder, blast_res_dict, None)
+
+    # Generate and write final output
+    out = generate_html_output(
+        sample_name,
+        styles.set_style,
+        introduction_table,
+        introduction_header,
+        hmm_table,
+        hmm_header,
+        host_dict,
+        images_hmm
+    )
+
+    with open(args.output, 'w') as f:
+        f.write(out)
+
+
+if __name__ == "__main__":
+    main()
