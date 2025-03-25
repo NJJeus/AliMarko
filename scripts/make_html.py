@@ -122,7 +122,7 @@ def create_host_dict(ictv_drawings, drawings_folder, palette):
             # Handle contamination info in virus name
             if 'CONTAMINATION_INFO:' in virus_name:
                 virus_name = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]} ' \
-                            f'<span class="tooltip-text">{virus_name.split("CONTAMINATION_INFO:")[1]}</span></h3>'
+                            f'{styles.HTMLTooltip(virus_name.split("CONTAMINATION_INFO:")[1])}</h3>'
             else:
                 virus_name = f'<h3>{virus_name}</h3>'
 
@@ -142,16 +142,16 @@ def create_host_dict(ictv_drawings, drawings_folder, palette):
             images_html = '\n'.join(images)
 
             # Create table and add to viruses dict
-            table_html = styles.Table(
+            table_html = styles.HTMLTable(
                 virus_list,
                 ['Fragment', 'Len', 'Coverage width', 'Nucleotide similarity', 'Mean Depth', 'MeanMAPQ', 'SNP Count'],
                 palette,
                 get_color
-            ).make_table() + images_html
+            ).render() + images_html
             
             viruses.update({virus_name: table_html})
 
-        host_dict.update({f'<h2>Host: {host}</h2>': styles.Details(viruses).make_details()})
+        host_dict.update({f'<h2>Host: {host}</h2>': styles.HTMLDetails(viruses).render()})
 
     return host_dict
 
@@ -164,13 +164,9 @@ def load_virus_images(drawings_folder, virus_tech_name, genbank_ids):
             picture_path = glob.glob(f"{drawings_folder}/{virus_tech_name}/*{genbank_id}*")[0]
             with open(picture_path, "rb") as image_file:
                 encoded_image = base64.b64encode(image_file.read()).decode()
-                images.append(
-                    f'<div style="overflow: hidden; max-height:700px;">'
-                    f'<img alt="" src="data:image/jpeg;base64,{encoded_image}" '
-                    f'alt="Ooops! This should have been a picture" '
-                    f'style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div>'
-                )
-        except Exception:
+                images.append(styles.HTMLImage(encoded_image, type='jpg'))
+        except Exception as e:
+            print(e)
             continue
     return images
 
@@ -206,31 +202,22 @@ def process_hmm_results(hmm_frame, hmm_drawings_folder, trees_folder, blast_res_
             picture_path = glob.glob(f"{hmm_drawings_folder}/*{contig}*")[0]
             with open(picture_path, "rb") as image_file:
                 encoded_image = base64.b64encode(image_file.read()).decode()
-                html_image = create_hmm_image_html(encoded_image)
+                html_image = styles.HTMLImage(encoded_image, 'svg')
                 
                 trees_pictures = process_trees_for_contig(trees_folder, contig, table_contig)
                 
-                details_image = styles.Details({
+                details_image = styles.HTMLDetails({
                     f'<h3>{contig}:{models}<h3>': (
-                        styles.Table(table_contig.to_numpy(), table_contig.columns, palette, get_color).make_table() + 
+                        styles.HTMLTable(table_contig.to_numpy(), table_contig.columns, palette, get_color).render() + 
                         '\n' + blastn_info + '\n' + html_image + '\n' + trees_pictures
                     )
-                }).make_details()
+                }).render()
                 images_hmm.append(details_image)
         except Exception:
             continue
 
     return '\n'.join(images_hmm)
 
-
-def create_hmm_image_html(encoded_image):
-    """Create HTML for HMM image."""
-    return (
-        f'<div style="overflow: hidden; max-height:700px;">'
-        f'<img alt="" src="data:image/svg+xml;charset=utf-8;base64,{encoded_image}" '
-        f'alt="Ooops! This should have been a picture" '
-        f'style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
-    )
 
 
 def process_trees_for_contig(trees_folder, contig, table_contig):
@@ -246,12 +233,7 @@ def process_trees_for_contig(trees_folder, contig, table_contig):
                 continue
             tree_name = (f"<h3>Phylogenetic Tree of {tree_HMM}-Matched Amino Acid Sequences</h3>"
                          f"<h3>Putative protein: {protein_HMM}</h3>")
-            html_tree = (
-                f'<div style="overflow: hidden; max-height:700px;">'
-                f'<img alt="" src="data:image/jpeg;base64,{tree_encoded_image}" '
-                f'alt="Ooops! This should have been a picture" '
-                f'style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div><p>\n</p>'
-            )
+            html_tree = styles.HTMLImage(tree_encoded_image, 'jpg')
             trees_pictures = trees_pictures + '\n' + tree_name + html_tree
     return trees_pictures
 
@@ -260,10 +242,10 @@ def generate_html_output(sample_name, style, introduction_table, introduction_he
                         hmm_table, hmm_header, host_dict, images_hmm):
     """Generate final HTML output."""
     greetings = f"<p>\n</p><h1> <center>Sample: {sample_name} </h1>"
-    table_html = styles.Table(introduction_table, introduction_header, None, get_color).make_table()
+    table_html = styles.HTMLTable(introduction_table, introduction_header, None, get_color).render()
     hmm_greetings = f"<p>\n</p><h2> <center> HMM Hit Summary </h2><p>\n</p>"
-    table_hmm = styles.Table(hmm_table, hmm_header, None, get_color).make_table()
-    details = styles.Details(host_dict).make_details()
+    table_hmm = styles.HTMLTable(hmm_table, hmm_header, None, get_color).render()
+    details = styles.HTMLDetails(host_dict).render()
     
     return (
         style.replace('Sample Name', sample_name) + greetings + 
@@ -272,7 +254,7 @@ def generate_html_output(sample_name, style, introduction_table, introduction_he
         "<h2>Mapping Details</h2>" + details + 
         '<p>\n</p><p>\n</p><hr>' + 
         "<h2>HMM Module Results by Contig</h2>" + 
-        styles.Details({'<h2>Contigs</h2>\n': images_hmm}).make_details() + 
+        styles.HTMLDetails({'<h2>Contigs</h2>\n': images_hmm}).render() + 
         '<p>\n</p>'
     )
 
@@ -314,7 +296,7 @@ def main():
     # Generate and write final output
     out = generate_html_output(
         sample_name,
-        styles.set_style,
+        styles.get_style(),
         introduction_table,
         introduction_header,
         hmm_table,

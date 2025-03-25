@@ -26,7 +26,6 @@ class HTMLTable:
         return f'<div class="tableFixHead"><table align="center">\n<thead>\n<tr>{th_elements}</tr></thead>'
 
     def make_td(self, x):
-        """Generate table cell HTML with identical output structure"""
         if "CONTAMINATION_INFO:" in str(x):
             x, cont = x.split('CONTAMINATION_INFO:')
             return (
@@ -59,4 +58,30 @@ class HTMLDetails:
             f'<details><summary>{key}</summary>{content}</details>'
             for key, content in self.details_dict.items()
         )
+
+class VirusWarningTooltip:
+    def __init__(self, ):
+        self.tooltip = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]}' \
+                f'<span class="tooltip-text">{virus_name.split("CONTAMINATION_INFO:")[1]}</span></h3>'
+    def __str__(self):
+        return self.tooltip
+
+
+class HTMLTooltip():
+    def __new__(self, tooltip_text):
+        return f'<span class="tooltip-text">{tooltip_text}</span>'
+        
+
+class HTMLImage:
+    def __new__(self, encoded_image, type):
+        self.encoded_image = encoded_image
+        match type:
+            case 'jpg':
+                self.type = 'jpg'
+            case 'svg':
+                self.type = 'image/svg+xml;charset=utf-8'
+        self.html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:{self.type};base64,{self.encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div> \n'
+        return self.html_image
+
+
 
