@@ -1,4 +1,3 @@
-
 def get_style():
     """Read CSS from external file and wrap in HTML head"""
     with open('scripts/styles.css', 'r') as f:
@@ -27,7 +26,7 @@ class HTMLTable:
 
     def make_td(self, x):
         color = self.get_color(self.pallete, x) if self.get_color else ''
-        attrs = {'style': f'background-color: {color}; width:10; height:5'}
+        attrs = {'style': f'background-color: {color}'} if color else {}
         return Tooltip.create(x, tag="td", **attrs)
 
     def table_body(self):
@@ -55,7 +54,6 @@ class HTMLDetails:
         )
 
 
-
 class HTMLImage:
     def __new__(self, encoded_image, type):
         self.encoded_image = encoded_image
@@ -64,22 +62,15 @@ class HTMLImage:
                 self.type = 'jpg'
             case 'svg':
                 self.type = 'image/svg+xml;charset=utf-8'
-        self.html_image = f'<div style="overflow: hidden; max-height:700px;"><img alt="" src="data:{self.type};base64,{self.encoded_image}" alt="Ooops! This should have been a picture" style="width: 60%; border: 2px solid #959494; min-width: 700px;"/></div> \n'
+        self.html_image = f'<div class="image-container"><img alt="" src="data:{self.type};base64,{self.encoded_image}" alt="Ooops! This should have been a picture"/></div> \n'
         return self.html_image
 
 
 class Header:
     def __new__(cls, text, l=3, tooltip_text=""):
-        """
-        Creates HTML headers with optional tooltips using __new__
-        :param text: Header text content
-        :param level: Header level (1-6)
-        :param has_tooltip: Whether to add tooltip
-        :param tooltip_text: Tooltip content if has_tooltip=True
-        """
         tag = f'h{l}'
         if tooltip_text:
-            return f'<{tag} style="color:#C80000" class="tooltip">{text}<span class="tooltip-text">{tooltip_text}</span></{tag}>'
+            return f'<{tag} class="tooltip red-header">{text}<span class="tooltip-text">{tooltip_text}</span></{tag}>'
         return f'<{tag}>{text}</{tag}>'
 
 
@@ -100,9 +91,10 @@ class Tooltip:
         attrs_str = ' '.join(f'{k}="{v}"' for k, v in attrs.items())
 
         if tag == "td":
-            style = f'background-color: #FFC5C5; width:10; height:5'
-            if 'style' in attrs:
-                style = f'{attrs["style"]}; background-color: #FFC5C5'
-            return f'<td class="tooltip" data-tooltip="{tooltip}" style="{style}">{main}</td>'
-        
+            classes = "tooltip tooltip-warning"
+            if 'class' in attrs:
+                classes = f"{attrs['class']} {classes}"
+            style = attrs.get("style", "")
+            return f'<td class="{classes}" data-tooltip="{tooltip}" style="{style}">{main}</td>'
+
         return f'<{tag} class="tooltip" data-tooltip="{tooltip}" {attrs_str}>{main}</{tag}>'
