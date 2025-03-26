@@ -26,14 +26,9 @@ class HTMLTable:
         return f'<div class="tableFixHead"><table align="center">\n<thead>\n<tr>{th_elements}</tr></thead>'
 
     def make_td(self, x):
-        if "CONTAMINATION_INFO:" in str(x):
-            x, cont = x.split('CONTAMINATION_INFO:')
-            return (
-                '<td class="tooltip" data-tooltip="' + cont + '" '
-                'style="background-color: #FFC5C5; width=10; heigh=5">' + x + '</td>'
-            )
         color = self.get_color(self.pallete, x) if self.get_color else ''
-        return f'<td style="background-color: {color}; width=10; heigh=5">{x}</td>'
+        attrs = {'style': f'background-color: {color}; width:10; height:5'}
+        return Tooltip.create(x, tag="td", **attrs)
 
     def table_body(self):
         """Generate table body with identical output format"""
@@ -59,18 +54,7 @@ class HTMLDetails:
             for key, content in self.details_dict.items()
         )
 
-class VirusWarningTooltip:
-    def __init__(self, ):
-        self.tooltip = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]}' \
-                f'<span class="tooltip-text">{virus_name.split("CONTAMINATION_INFO:")[1]}</span></h3>'
-    def __str__(self):
-        return self.tooltip
 
-
-class HTMLTooltip():
-    def __new__(self, tooltip_text):
-        return f'<span class="tooltip-text">{tooltip_text}</span>'
-        
 
 class HTMLImage:
     def __new__(self, encoded_image, type):
@@ -84,4 +68,41 @@ class HTMLImage:
         return self.html_image
 
 
+class Header:
+    def __new__(cls, text, l=3, tooltip_text=""):
+        """
+        Creates HTML headers with optional tooltips using __new__
+        :param text: Header text content
+        :param level: Header level (1-6)
+        :param has_tooltip: Whether to add tooltip
+        :param tooltip_text: Tooltip content if has_tooltip=True
+        """
+        tag = f'h{l}'
+        if tooltip_text:
+            return f'<{tag} style="color:#C80000" class="tooltip">{text}<span class="tooltip-text">{tooltip_text}</span></{tag}>'
+        return f'<{tag}>{text}</{tag}>'
 
+
+class Tooltip:
+    @staticmethod
+    def create(content, tag="span", **attrs):
+        """
+        Creates HTML elements with tooltips
+        :param content: Content with optional CONTAMINATION_INFO
+        :param tag: HTML tag to create
+        :param attrs: Additional HTML attributes
+        """
+        if "CONTAMINATION_INFO:" not in str(content):
+            attrs_str = ' '.join(f'{k}="{v}"' for k, v in attrs.items())
+            return f'<{tag} {attrs_str}>{content}</{tag}>'
+
+        main, tooltip = content.split('CONTAMINATION_INFO:', 1)
+        attrs_str = ' '.join(f'{k}="{v}"' for k, v in attrs.items())
+
+        if tag == "td":
+            style = f'background-color: #FFC5C5; width:10; height:5'
+            if 'style' in attrs:
+                style = f'{attrs["style"]}; background-color: #FFC5C5'
+            return f'<td class="tooltip" data-tooltip="{tooltip}" style="{style}">{main}</td>'
+        
+        return f'<{tag} class="tooltip" data-tooltip="{tooltip}" {attrs_str}>{main}</{tag}>'

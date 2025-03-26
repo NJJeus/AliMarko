@@ -11,6 +11,7 @@ import matplotlib.colors as mcolors
 # Add custom scripts to the Python path
 sys.path.append('scripts')
 import styles
+from styles import Header
 
 
 def check_condition(condition, message):
@@ -119,12 +120,9 @@ def create_host_dict(ictv_drawings, drawings_folder, palette):
             virus_tech_name = row['Isolate_id'][virus_loc]
             virus_name = row['Species'][virus_loc]
             
-            # Handle contamination info in virus name
-            if 'CONTAMINATION_INFO:' in virus_name:
-                virus_name = f'<h3 class="tooltip" style="color:#C80000">{virus_name.split("CONTAMINATION_INFO:")[0]} ' \
-                            f'{styles.HTMLTooltip(virus_name.split("CONTAMINATION_INFO:")[1])}</h3>'
-            else:
-                virus_name = f'<h3>{virus_name}</h3>'
+            # contamination_info is empty if there is no CONTAMINATION_INFO:
+            virus_name, _, contamination_info = virus_name.partition('CONTAMINATION_INFO:')
+            virus_name = Header(virus_name, l=3, tooltip_text=contamination_info)
 
             # Prepare virus data for table
             virus_list = np.array([
@@ -151,7 +149,7 @@ def create_host_dict(ictv_drawings, drawings_folder, palette):
             
             viruses.update({virus_name: table_html})
 
-        host_dict.update({f'<h2>Host: {host}</h2>': styles.HTMLDetails(viruses).render()})
+        host_dict.update({Header(f'Host: {host}', l=2): styles.HTMLDetails(viruses).render()})
 
     return host_dict
 
@@ -179,7 +177,7 @@ def order_host_dict(host_dict):
         'fungi', 'plants', 'protists (S)', 'algae', 'protists', 'bacteria',
         'archaea', 'sewage (S)', 'soil (S)', 'freshwater (S)'
     ]
-    order = [f'<h2>Host: {host}</h2>' for host in predefined_order]
+    order = [Header(f'Host: {host}', l=2) for host in predefined_order]
     missing_hosts = [key for key in host_dict.keys() if key not in order]
     order += missing_hosts
     return {key: host_dict[key] for key in sorted(host_dict.keys(), key=lambda x: order.index(x))}
@@ -196,7 +194,7 @@ def process_hmm_results(hmm_frame, hmm_drawings_folder, trees_folder, blast_res_
         models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
         models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
 
-        blastn_info = '<h4 style="white-space: pre-line">' + blast_res_dict.get(contig, 'No blast hits for this contig') + '</h4>'
+        blastn_info = Header(blast_res_dict.get(contig, 'No blast hits for this contig'), l=4)
 
         try:
             picture_path = glob.glob(f"{hmm_drawings_folder}/*{contig}*")[0]
@@ -207,7 +205,7 @@ def process_hmm_results(hmm_frame, hmm_drawings_folder, trees_folder, blast_res_
                 trees_pictures = process_trees_for_contig(trees_folder, contig, table_contig)
                 
                 details_image = styles.HTMLDetails({
-                    f'<h3>{contig}:{models}<h3>': (
+                    Header(f'{contig}:{models}', l=3): (
                         styles.HTMLTable(table_contig.to_numpy(), table_contig.columns, palette, get_color).render() + 
                         '\n' + blastn_info + '\n' + html_image + '\n' + trees_pictures
                     )
@@ -231,8 +229,7 @@ def process_trees_for_contig(trees_folder, contig, table_contig):
                 protein_HMM = table_contig.query(f'HMM == "{tree_HMM}"')['Putative Protein'].unique()[0]
             except Exception:
                 continue
-            tree_name = (f"<h3>Phylogenetic Tree of {tree_HMM}-Matched Amino Acid Sequences</h3>"
-                         f"<h3>Putative protein: {protein_HMM}</h3>")
+            tree_name = Header(f"Phylogenetic Tree of {tree_HMM}-Matched Amino Acid Sequences Putative protein: {protein_HMM}", l=3)
             html_tree = styles.HTMLImage(tree_encoded_image, 'jpg')
             trees_pictures = trees_pictures + '\n' + tree_name + html_tree
     return trees_pictures
@@ -241,21 +238,20 @@ def process_trees_for_contig(trees_folder, contig, table_contig):
 def generate_html_output(sample_name, style, introduction_table, introduction_header, 
                         hmm_table, hmm_header, host_dict, images_hmm):
     """Generate final HTML output."""
-    greetings = f"<p>\n</p><h1> <center>Sample: {sample_name} </h1>"
+    greetings = Header(f"Sample: {sample_name}", l=1)
     table_html = styles.HTMLTable(introduction_table, introduction_header, None, get_color).render()
-    hmm_greetings = f"<p>\n</p><h2> <center> HMM Hit Summary </h2><p>\n</p>"
+    hmm_greetings = Header("HMM Hit Summary", l=2)
     table_hmm = styles.HTMLTable(hmm_table, hmm_header, None, get_color).render()
     details = styles.HTMLDetails(host_dict).render()
     
     return (
         style.replace('Sample Name', sample_name) + greetings + 
-        "<h2>Mapping Summary</h2>" + table_html + 
-        hmm_greetings + table_hmm + '<p>\n</p><hr>' + 
-        "<h2>Mapping Details</h2>" + details + 
-        '<p>\n</p><p>\n</p><hr>' + 
-        "<h2>HMM Module Results by Contig</h2>" + 
-        styles.HTMLDetails({'<h2>Contigs</h2>\n': images_hmm}).render() + 
-        '<p>\n</p>'
+        Header("Mapping Summary", l=2) + table_html + 
+        hmm_greetings + table_hmm + 
+        Header("Mapping Details", l=2) + details + 
+        Header("HMM Module Results by Contig", l=2) + 
+        styles.HTMLDetails({Header('Contigs', l=2): images_hmm}).render() +
+        Header('', l=2)
     )
 
 
