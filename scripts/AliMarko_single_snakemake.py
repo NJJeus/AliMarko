@@ -47,13 +47,19 @@ rule kraken2:
     priority:
         4
     shell: 
-        f"""
-        kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} --use-names --report {{output.kraken2_report}}.tmp --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}.fastq.gz.tmp 
-        gzip -c {{output.read1}}.tmp > {{output.read1}}; rm {{output.read1}}.tmp
-        gzip -c {{output.kraken2_report}}.tmp > {{output.kraken2_report}}; rm {{output.kraken2_report}}.tmp
-        
+       f"""
+        if [ "{{params.kraken2_db}}" = "none" ]; then
+            ln -s {{input.read1}} {{output.read1}}
+        else
+            kraken2 --threads {{threads}} --confidence 0.9 --db {{params.kraken2_db}} {{input.read1}} --use-names --report {{output.kraken2_report}}.tmp --output {{output.kraken2_out}} --unclassified-out {base}/not_classified_fastq/{{params.sample}}.fastq.gz.tmp
+            gzip -c {base}/not_classified_fastq/{{params.sample}}.fastq.gz.tmp > {{output.read1}}
+            rm {base}/not_classified_fastq/{{params.sample}}.fastq.gz.tmp
+            gzip -c {{output.kraken2_report}}.tmp > {{output.kraken2_report}}
+            rm {{output.kraken2_report}}.tmp
+        fi
         """
-        
+
+
 rule deduplicate_fastq:
     input:
         read1 = basedir + 'not_classified_fastq/{file}.fastq.gz'
