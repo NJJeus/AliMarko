@@ -25,7 +25,7 @@ threads = conf.pop('threads')
 current_dir = os.getcwd()
 
 if paired == "paired":
-    cmd = f'snakemake -s scripts/AliMarko_paired_snakemake.py  --use-conda -j {threads} -k --config '
+    cmd = f'snakemake -s scripts/AliMarko_paired_snakemake.py --use-conda -j {threads} --config '
 elif paired == "single":
     cmd = f'snakemake -s scripts/AliMarko_single_snakemake.py --use-conda -j {threads} --config '
 else:

@@ -1,0 +1,216 @@
+
+
+def get_style(): return """
+<head>
+	<title>Sample Name</title>
+	 <style>
+        .tableFixHead {
+        overflow-y: auto; /* make the table scrollable if height is more than 200 px  */
+        max-height: 500px; /* gives an initial height of 200px to the table */
+        width: 95%;
+        margin:auto;
+        text-align: center;
+                      }
+
+
+        .tableFixHead thead th {
+        position: sticky; /* make the table heads sticky */
+        top: 0px; /* table head will be placed from the top of the table and sticks to it */
+        text-align: center;
+                                }
+
+
+        body {
+                        background-color: #f1f1f1;
+                        font-family: Arial, sans-serif;
+                        color: #333;
+                        margin: 0;
+                        padding: 0;
+            text-align: center;
+                }
+                header {
+                        background-color: #2ecc71;
+                        color: #000;
+                        padding: 100px;
+            text-align: center;
+                }
+                h1 {
+                        font-size: 36px;
+                        margin-top: 0;
+            color: #454444;
+            text-align: center;
+                }
+        h2 {
+                        font-size: 28px;
+                        margin-top: 0;
+            color: #454444;
+            text-align: center;
+        }
+        th{
+            z-index:1000;
+        }
+ hr {
+  width: 800px;
+  height: 4px;
+  background-color: #BBB; 
+  border-radius: 5px; /* smooth ends */
+  border: none; /* remove default border */
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5); /* add a subtle shadow */
+}
+
+
+        h3 {
+        font-size: 18px;
+        margin-top: 0;
+        color: #454444;
+        text-align: center;
+                }
+                main {
+                        max-width: 800px;
+                        margin: 0 auto;
+                        padding: 10px;
+            text-align: center;
+                }
+                p {
+                        line-height: 1.5;
+                        margin-bottom: 20px;
+                }
+                a {
+                        color: #2ecc71;
+                        text-decoration: none;
+                }
+                a:hover {
+                        text-decoration: underline;
+                }
+                img {
+                        width:95%;
+                        border-radius:3px;
+
+                }
+                table {
+                        width: 800px;
+                        margin-bottom: 20px;
+                        border-radius:4px;
+
+            font-size: 12px;
+                        box-shadow: 0px 0px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+                }
+                th, td {
+                        text-align: center;
+                        padding: 2px;
+            height: 4px;
+            font-size: 17px;
+                        border-bottom: 1px solid #ddd;
+                }
+                td {
+                        background-color: #fff;
+
+                }
+                th {
+                        background-color: #18aa9d;
+                        color: #fff;
+                        font-weight: bold;
+                        border-radius:3px;
+
+            font-size: 18px;
+
+
+                }
+
+                tr:hover {
+                        background-color: #f5f5f5;
+                }
+                td.tooltip {
+            position: relative;
+        }
+
+        td.tooltip:hover::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 6px;
+            top: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            z-index: 1001;
+        }
+        h3.tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        span.tooltip-text {
+            display: none;
+            position: absolute;
+            background-color: #333;
+            color: #fff;
+            padding: 5px;
+            border-radius: 6px;
+            top: -30px;
+            left: 100%;
+            align:left;
+            z-index: 1011;
+            
+            transform: translateX(-50%);
+        }
+
+        h3.tooltip:hover span.tooltip-text {
+            display: block;
+        }
+        
+        </style>
+
+</head>
+"""
+
+class HTMLTable:
+    def __init__(self, virus_2d_array, header, colorfunc, get_color):
+        self.virus_array = virus_2d_array
+        self.header = header
+        self.pallete = colorfunc
+        self.get_color = get_color
+
+    def table_head(self):
+        """Generate the table header HTML keeping the exact same output format"""
+        th_elements = ''.join(f'<th>{c}</th>' for c in self.header)
+        return f'<div class="tableFixHead"><table align="center">\n<thead>\n<tr>{th_elements}</tr></thead>'
+
+    def make_td(self, x):
+        """Generate table cell HTML with identical output structure"""
+        if "CONTAMINATION_INFO:" in str(x):
+            x, cont = x.split('CONTAMINATION_INFO:')
+            return (
+                '<td class="tooltip" data-tooltip="' + cont + '" '
+                'style="background-color: #FFC5C5; width=10; heigh=5">' + x + '</td>'
+            )
+        color = self.get_color(self.pallete, x) if self.get_color else ''
+        return f'<td style="background-color: {color}; width=10; heigh=5">{x}</td>'
+
+    def table_body(self):
+        """Generate table body with identical output format"""
+        rows = []
+        for line in self.virus_array:
+            cells = ''.join(self.make_td(i) for i in line)
+            rows.append(f'<tr>{cells}</tr>')
+        return '<tbody>\n' + '\n'.join(rows) + '</tbody>\n</table></div>'
+
+    def render(self):
+        """Maintains the exact same method name and concatenation order"""
+        return self.table_head() + self.table_body()
+
+
+class HTMLDetails:
+    def __init__(self, details_dict):
+        self.details_dict = details_dict
+
+    def render(self):
+        """Produces identical HTML output as the original"""
+        return ''.join(
+            f'<details><summary>{key}</summary>{content}</details>'
+            for key, content in self.details_dict.items()
+        )
+
