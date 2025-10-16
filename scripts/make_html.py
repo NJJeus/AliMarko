@@ -7,18 +7,24 @@ import glob
 import argparse
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
+import urllib.parse
+from Bio import SeqIO # New Import for reading FASTA files
 
 # Add custom scripts to the Python path
 sys.path.append('scripts')
-import styles
+# Assuming styles.py is available and contains the necessary classes
+import styles 
 from styles import Header
 
 
-def check_condition(condition, message):
-    """Check a condition and exit with a message if it fails."""
-    if not condition:
+def check_condition(condition, message, mode='fail'):
+    if condition:
+        return True
+    elif not condition and mode=='fail':
         print(message)
         sys.exit(1)
+    elif not condition and mode=='ignore':
+        return False
 
 
 def create_palette(min_score, max_score):
@@ -49,9 +55,11 @@ def add_string(x, string_to_add):
 
 def load_blast_results(blast_results_path):
     """Load and process BLAST results."""
-    blast_results = pd.read_table(blast_results_path)
-    blast_results.columns = ['qseqid', 'sseqid', 'stitle', 'salltitles', 'pident', 'length', 'mismatch', 'gapopen', 
-                           'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
+    try:
+        blast_results = pd.read_table(blast_results_path)
+        blast_results.columns = ['qseqid', 'sseqid', 'stitle', 'salltitles', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
+    except Exception:
+        blast_results = pd.DataFrame({i:[] for i in ['qseqid', 'sseqid', 'stitle', 'salltitles', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']})
     blast_results = blast_results.sort_values('bitscore', ascending=False).drop_duplicates('qseqid')
     blast_res_dict = blast_results[['qseqid', 'stitle', 'pident', 'length']].set_index('qseqid').to_dict('index')
     return {k: f"The best blastn hit: {v['stitle']}. \n Alignment length: {v['length']} bp, identity: {v['pident']}%" 
@@ -64,18 +72,36 @@ def validate_inputs(args):
     check_condition(os.path.isdir(args.drawings), "Drawings folder doesn't exist")
     check_condition(os.path.isdir(args.hmm_drawings), "HMM drawings folder doesn't exist")
     check_condition(os.path.isfile(args.hmm_report), "A HMM report file does not exist")
-    check_condition(os.path.isdir(args.trees_folder), "Trees folder doesn't exist")
+    if not check_condition(os.path.isdir(args.trees_folder), "Trees folder doesn't exist", mode='ignore'):
+        args.trees_folder = False
     check_condition(os.path.isfile(args.blast_results), "An input file with BLAST results does not exist")
+    check_condition(os.path.isfile(args.fasta_file), "The input FASTA file does not exist") # New validation
+
+
+def load_fasta_sequences(fasta_file_path):
+    """
+    Load sequences from a FASTA file into a dictionary mapping ID to sequence string.
+    """
+    sequence_dict = {}
+    try:
+        for record in SeqIO.parse(fasta_file_path, "fasta"):
+            sequence_dict[record.id] = str(record.seq)
+        return sequence_dict
+    except Exception as e:
+        print(f"Error reading FASTA file {fasta_file_path}: {e}")
+        sys.exit(1)
 
 
 def process_ictv_coverage(coverage_file):
     """Process ICTV coverage data."""
     sample_name = os.path.splitext(os.path.basename(coverage_file))[0]
     ictv_coverage = pd.read_csv(coverage_file)
-    
-    # Add contamination info if present
-    ictv_coverage['Feature'] = ictv_coverage['Feature'].apply(add_string, string_to_add='CONTAMINATION_INFO:')
-    ictv_coverage['Species'] = ictv_coverage['Species'] + ictv_coverage['Feature'].fillna('')
+    try:
+        # Add contamination info if present
+        ictv_coverage['Feature'] = ictv_coverage['Feature'].apply(add_string, string_to_add='CONTAMINATION_INFO:')
+        ictv_coverage['Species'] = ictv_coverage['Species'] + ictv_coverage['Feature'].fillna('')
+    except Exception:
+        None
     
     return sample_name, ictv_coverage
 
@@ -183,13 +209,21 @@ def order_host_dict(host_dict):
     return {key: host_dict[key] for key in sorted(host_dict.keys(), key=lambda x: order.index(x))}
 
 
-def process_hmm_results(hmm_frame, hmm_drawings_folder, trees_folder, blast_res_dict, palette):
+
+
+def process_hmm_results(hmm_frame, hmm_drawings_folder, trees_folder, blast_res_dict, palette, sequences_dict):
     """Process HMM results and generate HTML content."""
     positive_contigs = hmm_frame.query('Score_ratio > 0.5').groupby('Name').count().query('Score > 0').reset_index().Name
     list_of_contigs = hmm_frame['Name'][hmm_frame['Name'].isin(positive_contigs)].unique()
     images_hmm = []
 
     for contig in list_of_contigs:
+        # 2. Select the sequence record where ID matches 'contig'
+        contig_sequence = sequences_dict.get(contig, "") 
+
+        # 3. Add sequence utility HTML
+        sequence_utility_html = styles.create_sequence_utility_html(contig, contig_sequence)
+
         table_contig = hmm_frame.query(f'Name == "{contig}"').drop(['Threshold', 'From', 'To', 'Score_ratio'], axis=1)
         models = hmm_frame.query(f'Name == "{contig}"').Taxon.unique().tolist()
         models = ",".join(models) if len(models) < 3 else f"({len(models)} taxa)"
@@ -206,21 +240,25 @@ def process_hmm_results(hmm_frame, hmm_drawings_folder, trees_folder, blast_res_
                 
                 details_image = styles.HTMLDetails({
                     Header(f'{contig}:{models}', l=3): (
+                        # Inject sequence utility here
+                        sequence_utility_html + 
                         styles.HTMLTable(table_contig.to_numpy(), table_contig.columns, palette, get_color).render() + 
                         '\n' + blastn_info + '\n' + html_image + '\n' + trees_pictures
                     )
                 }).render()
                 images_hmm.append(details_image)
         except Exception:
+            # print(f"Warning: Could not process drawings/images for contig {contig}")
             continue
 
     return '\n'.join(images_hmm)
 
 
-
 def process_trees_for_contig(trees_folder, contig, table_contig):
     """Process phylogenetic trees for a contig."""
     trees_pictures = ''
+    if not trees_folder:
+        return '\n'
     for tree in [i for i in glob.glob(f"{trees_folder}/*") if contig in i]:
         with open(tree, "rb") as tree_image_file:
             tree_encoded_image = base64.b64encode(tree_image_file.read()).decode()
@@ -235,17 +273,19 @@ def process_trees_for_contig(trees_folder, contig, table_contig):
     return trees_pictures
 
 
+
 def generate_html_output(sample_name, style, introduction_table, introduction_header, 
                         hmm_table, hmm_header, host_dict, images_hmm):
-    """Generate final HTML output."""
+    """Generate final HTML output, appending the necessary JavaScript."""
     greetings = Header(f"Sample: {sample_name}", l=1)
     table_html = styles.HTMLTable(introduction_table, introduction_header, None, get_color).render()
     hmm_greetings = Header("HMM Hit Summary", l=2)
     table_hmm = styles.HTMLTable(hmm_table, hmm_header, None, get_color).render()
     details = styles.HTMLDetails(host_dict).render()
     
-    return (
-        style.replace('Sample Name', sample_name) + greetings + 
+    # 1. Generate the main report body
+    report_body = (
+        greetings + 
         Header("Mapping Summary", l=2) + table_html + 
         hmm_greetings + table_hmm + 
         Header("Mapping Details", l=2) + details + 
@@ -253,6 +293,15 @@ def generate_html_output(sample_name, style, introduction_table, introduction_he
         styles.HTMLDetails({Header('Contigs', l=2): images_hmm}).render() +
         Header('', l=2)
     )
+    
+    # 2. Append the utility script and custom message box to the body end
+    utility_script = styles.get_utility_script()
+    
+    # 3. Insert the report body and script into the HTML template (assuming styles.get_style() provides a full HTML structure)
+    # This assumes styles.get_style() contains the opening <html>, <head>, and <body> tags, and the closing tags are appended later.
+    final_output = style.replace('Sample Name', sample_name) + report_body + utility_script
+    
+    return final_output
 
 
 def main():
@@ -266,16 +315,25 @@ def main():
     parser.add_argument('-m', '--hmm_report', type=str, required=True, help='A HMM report file')
     parser.add_argument('-t', '--trees_folder', type=str, required=True, help='A folder with trees')
     parser.add_argument('-b', '--blast_results', type=str, required=True, help='BLAST tsv table')
+    # 1. Add FASTA file argument
+    parser.add_argument('-f', '--fasta_file', type=str, required=True, help='Path to the input FASTA file with all sequences.')
     args = parser.parse_args()
 
     # Validate inputs
     validate_inputs(args)
 
     # Load BLAST results
-    blast_res_dict = load_blast_results(args.blast_results)
+    try:
+        blast_res_dict = load_blast_results(args.blast_results)
+    except Exception:
+        blast_res_dict = {}
+
+    # Load FASTA sequences (New Step)
+    sequences_dict = load_fasta_sequences(args.fasta_file)
 
     # Process ICTV coverage data
     sample_name, ictv_coverage = process_ictv_coverage(args.coverage)
+
     introduction_table, introduction_header = create_introduction_table(ictv_coverage)
 
     # Process HMM report
@@ -286,8 +344,8 @@ def main():
     host_dict = create_host_dict(ictv_drawings, args.drawings, None)
     host_dict = order_host_dict(host_dict)
 
-    # Process HMM results
-    images_hmm = process_hmm_results(hmm_frame, args.hmm_drawings, args.trees_folder, blast_res_dict, None)
+    # Process HMM results (Pass sequences_dict)
+    images_hmm = process_hmm_results(hmm_frame, args.hmm_drawings, args.trees_folder, blast_res_dict, None, sequences_dict)
 
     # Generate and write final output
     out = generate_html_output(
@@ -307,3 +365,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -188,3 +188,36 @@ img[alt=""] {
 td.tooltip-warning {
   background-color: #FFC5C5 !important;
 }
+
+.button {
+  /* Inherit style from table headers (th) */
+  background-color: #18aa9d; /* Similar to th background */
+  color: #fff;             /* White text */
+  font-weight: bold;
+  border-radius: 3px;
+  font-size: 18px;
+
+  /* Button specific styling */
+  padding: 10px 20px;       /* Good spacing */
+  border: none;             /* Remove default border */
+  cursor: pointer;          /* Indicate it's clickable */
+  text-transform: uppercase; /* Make it stand out */
+  transition: background-color 0.2s, transform 0.1s; /* Smooth transitions */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.button:hover {
+  background-color: #148e83; /* Slightly darker shade on hover */
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15); /* Lift the shadow */
+}
+
+.button:active {
+  background-color: #0f6e66; /* Even darker shade when pressed */
+  transform: translateY(1px); /* Slight press effect */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.button:focus {
+  outline: 2px solid #2ecc71; /* Focus outline using the header color */
+  outline-offset: 2px;
+}

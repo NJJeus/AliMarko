@@ -396,7 +396,8 @@ rule generate_html_report:
         hmm_report = rules.generate_hmm_report.output.report,
         hmm_plots = rules.plot_hmm_results.output,
         trees = rules.visualize_tree.output,
-        blast_results = rules.blast_matched_contigs.output
+        blast_results = rules.blast_matched_contigs.output,
+        fasta = rules.generate_hmm_report.output.matched_contigs
     output:
         os.path.join(OUTPUT_DIR, "htmls/{sample}.html")
     conda:
@@ -411,7 +412,8 @@ rule generate_html_report:
             -m {input.hmm_report} \
             -a {input.hmm_plots} \
             -t {input.trees} \
-            -b {input.blast_results}
+            -b {input.blast_results} \
+            -f {input.fasta}
         """
 
 rule generate_summary_reports:
