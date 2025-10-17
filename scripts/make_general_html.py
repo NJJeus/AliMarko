@@ -40,8 +40,10 @@ def get_color(palette, value):
 
 def validate_inputs(args):
     """Validate all input files."""
-    check_condition(os.path.isfile(args.coverage), "Input file does not exist: coverage")
-    check_condition(os.path.isfile(args.coverage_heatmap), "Input file does not exist: coverage_heatmap")
+
+    if not args.coverage is None:
+        check_condition(os.path.isfile(args.coverage), "Input file does not exist: coverage")
+        check_condition(os.path.isfile(args.coverage_heatmap), "Input file does not exist: coverage_heatmap")
     check_condition(os.path.isfile(args.hmm_report), "Input file does not exist: hmm_report")
     check_condition(os.path.isfile(args.hmm_heatmap), "Input file does not exist: hmm_heatmap")
 
@@ -83,16 +85,20 @@ def load_image_as_html(image_path):
 
 def generate_report_tables(coverage_data, hmm_data):
     """Generate HTML tables for coverage and HMM data."""
-    cov_palette = create_palette(coverage_data['min'], coverage_data['max'])
+    
+    if coverage_data:
+        cov_palette = create_palette(coverage_data['min'], coverage_data['max'])
+        
+        coverage_table = HTMLTable(
+            coverage_data['table'],
+            coverage_data['header'],
+            cov_palette,
+            get_color
+        ).render()
+    else:
+        coverage_table = ''
+
     hmm_palette = create_palette(hmm_data['min'], hmm_data['max'])
-    
-    coverage_table = HTMLTable(
-        coverage_data['table'],
-        coverage_data['header'],
-        cov_palette,
-        get_color
-    ).render()
-    
     hmm_table = HTMLTable(
         hmm_data['table'],
         hmm_data['header'],
@@ -128,10 +134,11 @@ def main():
     """Main function to execute the script."""
     description = "Script that concatenates an ICTV coverage data with drawings of coverage"
     parser = argparse.ArgumentParser(description=description)
-    
-    parser.add_argument('-c', '--coverage', type=str, required=True,
+
+
+    parser.add_argument('-c', '--coverage', type=str, default=None,
                        help='A file with ICTV coverage')
-    parser.add_argument('-e', '--coverage_heatmap', type=str, required=True,
+    parser.add_argument('-e', '--coverage_heatmap', type=str, default=None,
                        help='A file with ICTV heatmap coverage')
     parser.add_argument('-m', '--hmm_report', type=str, required=True,
                        help='A HMM report file')
@@ -143,12 +150,17 @@ def main():
     args = parser.parse_args()
     validate_inputs(args)
     
-    coverage_data, sample_name = process_coverage_data(args.coverage)
+    if not args.coverage is None:
+        coverage_data, sample_name = process_coverage_data(args.coverage)
+        coverage_image = load_image_as_html(args.coverage_heatmap)
+    else:
+        coverage_data = False
+        sample_name = ''
+        coverage_image = ''
     hmm_data = process_hmm_data(args.hmm_report)
     
     coverage_table, hmm_table = generate_report_tables(coverage_data, hmm_data)
     
-    coverage_image = load_image_as_html(args.coverage_heatmap)
     hmm_image = load_image_as_html(args.hmm_heatmap)
     
     html_report = compose_html_report(
