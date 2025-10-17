@@ -25,9 +25,12 @@ threads = conf.pop('threads')
 current_dir = os.getcwd()
 
 if paired == "paired":
-    cmd = f'snakemake -s scripts/AliMarko_paired_snakemake.py --use-conda -j {threads} --config '
+    cmd = f'snakemake -s scripts/AliMarko_paired_snakemake.py --use-conda -k -j {threads} --config '
 elif paired == "single":
-    cmd = f'snakemake -s scripts/AliMarko_single_snakemake.py --use-conda -j {threads} --config '
+    cmd = f'snakemake -s scripts/AliMarko_single_snakemake.py --use-conda -k -j {threads} --config '
+elif paired == 'hmm_only':
+    cmd = f'snakemake -s scripts/AliMarko_hmm_only_snakemake.py --use-conda -k -j {threads} --config '
+    del conf['kraken_database']
 else:
     print("'paired' argument is incorrect")
     exit()

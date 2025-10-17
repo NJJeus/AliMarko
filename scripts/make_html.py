@@ -1,4 +1,6 @@
 import base64 
+
+
 import pandas as pd
 import os
 import sys
@@ -68,8 +70,9 @@ def load_blast_results(blast_results_path):
 
 def validate_inputs(args):
     """Validate all input files and directories."""
-    check_condition(os.path.isfile(args.coverage), "An input file does not exist")
-    check_condition(os.path.isdir(args.drawings), "Drawings folder doesn't exist")
+    if not args.coverage is None:
+        check_condition(os.path.isfile(args.coverage), "An input file does not exist")
+        check_condition(os.path.isdir(args.drawings), "Drawings folder doesn't exist")
     check_condition(os.path.isdir(args.hmm_drawings), "HMM drawings folder doesn't exist")
     check_condition(os.path.isfile(args.hmm_report), "A HMM report file does not exist")
     if not check_condition(os.path.isdir(args.trees_folder), "Trees folder doesn't exist", mode='ignore'):
@@ -308,10 +311,10 @@ def main():
     # Argument parsing
     description = "Script that concatenates ICTV coverage data with drawings of coverage."
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-c', '--coverage', type=str, required=True, help='A file with ICTV coverage')
-    parser.add_argument('-o', '--output', type=str, required=True, help='An output file')
-    parser.add_argument('-d', '--drawings', type=str, required=True, help='A folder with drawings')
-    parser.add_argument('-a', '--hmm_drawings', type=str, required=True, help='A folder with HMM drawings')
+    parser.add_argument('-c', '--coverage', type=str, required=False, default=None, help='A file with ICTV coverage')
+    parser.add_argument('-o', '--output', type=str, required=False, default=None, help='An output file')
+    parser.add_argument('-d', '--drawings', type=str, required=False, default=None, help='A folder with drawings')
+    parser.add_argument('-a', '--hmm_drawings', type=str, required=True,  help='A folder with HMM drawings')
     parser.add_argument('-m', '--hmm_report', type=str, required=True, help='A HMM report file')
     parser.add_argument('-t', '--trees_folder', type=str, required=True, help='A folder with trees')
     parser.add_argument('-b', '--blast_results', type=str, required=True, help='BLAST tsv table')
@@ -331,18 +334,24 @@ def main():
     # Load FASTA sequences (New Step)
     sequences_dict = load_fasta_sequences(args.fasta_file)
 
-    # Process ICTV coverage data
-    sample_name, ictv_coverage = process_ictv_coverage(args.coverage)
+    sample_name = os.path.splitext(os.path.basename(args.hmm_report))[0]
 
-    introduction_table, introduction_header = create_introduction_table(ictv_coverage)
+    if not args.coverage is None:
+        # Process ICTV coverage data
+        sample_name, ictv_coverage = process_ictv_coverage(args.coverage)
+
+        introduction_table, introduction_header = create_introduction_table(ictv_coverage)
+
+        # Process ICTV drawings
+        ictv_drawings = process_ictv_drawings(ictv_coverage, args.drawings)
+        host_dict = create_host_dict(ictv_drawings, args.drawings, None)
+        host_dict = order_host_dict(host_dict)
+    else:
+        ictv_coverage, introduction_header, introduction_table, host_dict = '', '', '', dict()
 
     # Process HMM report
     hmm_frame, hmm_header, hmm_table = process_hmm_report(args.hmm_report)
 
-    # Process ICTV drawings
-    ictv_drawings = process_ictv_drawings(ictv_coverage, args.drawings)
-    host_dict = create_host_dict(ictv_drawings, args.drawings, None)
-    host_dict = order_host_dict(host_dict)
 
     # Process HMM results (Pass sequences_dict)
     images_hmm = process_hmm_results(hmm_frame, args.hmm_drawings, args.trees_folder, blast_res_dict, None, sequences_dict)
