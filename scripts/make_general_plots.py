@@ -39,12 +39,7 @@ def parse_arguments():
     args = parser.parse_args()
     
     # Validate input directories
-    if args.cov_dir:
-        if not os.path.isdir(args.cov_dir):
-            raise ValueError("Input folder with coverage files does not exist")
-    else:
-        raise ValueError('Missing required argument: -i/--cov_dir')
-        
+      
     if args.hmm_dir:
         if not os.path.isdir(args.hmm_dir):
             raise ValueError("Input folder with HMM report files does not exist")
@@ -232,16 +227,18 @@ def main():
     """Main execution function."""
     args = parse_arguments()
     
-    # Process coverage data
-    coverage_data, red_indexes = process_coverage_data(
-        args.cov_dir, 
-        args.output_coverage_table
-    )
-    create_coverage_heatmap(
-        coverage_data, 
-        red_indexes, 
-        args.output_coverage_pic
-    )
+    if not args.cov_dir is None:
+        # Process coverage data
+        coverage_data, red_indexes = process_coverage_data(
+            args.cov_dir, 
+            args.output_coverage_table
+        )
+        create_coverage_heatmap(
+            coverage_data, 
+            red_indexes, 
+            args.output_coverage_pic
+        )
+
     
     # Process HMM data
     hmm_data = process_hmm_data(
